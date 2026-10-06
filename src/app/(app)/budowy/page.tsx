@@ -1,3 +1,4 @@
+import { ChevronRight } from "lucide-react";
 import { ActionForm } from "@/components/ui/ActionForm";
 import { FormField, inputClass } from "@/components/ui/Form";
 import { saveProjectAction } from "@/lib/actions/project-actions";
@@ -28,8 +29,9 @@ export default async function BudowyPage() {
           <ul className="mt-3 divide-y divide-border">
             {projects.map((project) => (
               <li key={project.id} className="py-3">
-                <details>
-                  <summary className="flex cursor-pointer flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+                <details className="group">
+                  <summary className="flex cursor-pointer list-none flex-wrap items-center gap-x-3 gap-y-1 rounded-lg px-2 py-1.5 text-sm hover:bg-black/5 [&::-webkit-details-marker]:hidden">
+                      <ChevronRight size={16} className="shrink-0 text-muted transition-transform group-open:rotate-90" />
                     <span className="font-medium">{project.name}</span>
                     <span className="rounded-full bg-black/5 px-2 py-0.5 text-xs">
                       {PROJECT_STATUS_LABELS[project.status]}

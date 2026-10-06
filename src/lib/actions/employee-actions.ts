@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { z } from "zod";
 import { getSession } from "@/lib/auth";
 import { createSupabaseServerClient, createSupabaseServiceClient } from "@/lib/supabase/server";
@@ -99,41 +100,108 @@ export async function createUserAction(_prev: ActionState, formData: FormData): 
   }
 
   revalidatePath("/uzytkownicy");
-  return { ok: true };
+  redirect("/uzytkownicy");
 }
 
-// Edycja danych osoby oraz (jeśli ma konto) jej roli.
+// Edycja danych osoby oraz (jeśli ma konto) jej roli i możliwości logowania.
 export async function updateUserAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const session = await getSession();
   if (!session?.isAdmin) return { ok: false, error: "Brak uprawnień." };
 
-  const id = String(formData.get("id") ?? "");
+  const id = z.uuid().safeParse(formData.get("id"));
+  if (!id.success) return { ok: false, error: "Nie znaleziono użytkownika." };
   const person = readPerson(formData, formData.get("is_active") === "on");
   if (!person.success) return { ok: false, error: firstIssue(person.error) };
+  const roleInput = z.enum(["admin", "pracownik"]).safeParse(formData.get("role"));
 
   const supabase = await createSupabaseServerClient();
-  const { data: employee, error: updateError } = await supabase
+  const { data: current, error: currentError } = await supabase
     .from("employees")
-    .update(person.data)
-    .eq("id", id)
     .select("user_id")
+    .eq("id", id.data)
     .maybeSingle();
-  if (updateError) return { ok: false, error: updateError.message };
-  if (!employee) return { ok: false, error: "Nie znaleziono użytkownika." };
+  if (currentError) return { ok: false, error: currentError.message };
+  if (!current) return { ok: false, error: "Nie znaleziono użytkownika." };
 
-  const roleInput = z.enum(["admin", "pracownik"]).safeParse(formData.get("role"));
-  if (employee.user_id && roleInput.success) {
-    const role: AppRole = roleInput.data;
-    // Administrator nie odbiera uprawnień sam sobie — inaczej mógłby zostać system bez admina.
-    if (employee.user_id === session.userId && role !== "admin") {
+  // Administrator nie odbiera dostępu sam sobie — inaczej mógłby zostać system bez admina.
+  if (current.user_id === session.userId) {
+    if (roleInput.success && roleInput.data !== "admin") {
       return { ok: false, error: "Nie możesz odebrać roli administratora własnemu kontu." };
     }
-    const fullName = `${person.data.first_name} ${person.data.last_name}`.trim();
-    const { error: roleError } = await supabase
-      .from("profiles")
-      .update({ role, full_name: fullName })
-      .eq("id", employee.user_id);
-    if (roleError) return { ok: false, error: roleError.message };
+    if (!person.data.is_active) {
+      return { ok: false, error: "Nie możesz dezaktywować własnego konta." };
+    }
+  }
+
+  const { error: updateError } = await supabase.from("employees").update(person.data).eq("id", id.data);
+  if (updateError) return { ok: false, error: updateError.message };
+
+  if (current.user_id) {
+    const service = createSupabaseServiceClient();
+    // Nieaktywny użytkownik nie może się logować (blokada konta); aktywny — blokada zdjęta.
+    const { error: banError } = await service.auth.admin.updateUserById(current.user_id, {
+      ban_duration: person.data.is_active ? "none" : "876000h",
+    });
+    if (banError) return { ok: false, error: banError.message };
+
+    if (roleInput.success) {
+      const role: AppRole = roleInput.data;
+      const fullName = `${person.data.first_name} ${person.data.last_name}`.trim();
+      const { error: roleError } = await supabase
+        .from("profiles")
+        .update({ role, full_name: fullName })
+        .eq("id", current.user_id);
+      if (roleError) return { ok: false, error: roleError.message };
+    }
+  }
+
+  revalidatePath("/uzytkownicy");
+  redirect("/uzytkownicy");
+}
+
+// Usuwa użytkownika razem z kontem logowania. Osoby, która ma już wpisy czasu pracy, usunąć
+// się nie da (historia godzin i kosztów musi zostać) — takie konto należy dezaktywować.
+export async function deleteUserAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const session = await getSession();
+  if (!session?.isAdmin) return { ok: false, error: "Brak uprawnień." };
+
+  const id = z.uuid().safeParse(formData.get("id"));
+  if (!id.success) return { ok: false, error: "Nie znaleziono użytkownika." };
+
+  const service = createSupabaseServiceClient();
+  const { data: employee, error: employeeError } = await service
+    .from("employees")
+    .select("user_id")
+    .eq("id", id.data)
+    .maybeSingle();
+  if (employeeError) return { ok: false, error: employeeError.message };
+  if (!employee) return { ok: false, error: "Nie znaleziono użytkownika." };
+  if (employee.user_id === session.userId) {
+    return { ok: false, error: "Nie możesz usunąć własnego konta." };
+  }
+
+  const { count, error: countError } = await service
+    .from("time_entries")
+    .select("id", { count: "exact", head: true })
+    .eq("employee_id", id.data);
+  if (countError) return { ok: false, error: countError.message };
+  if (count) {
+    return {
+      ok: false,
+      error: `Ten użytkownik ma wpisy czasu pracy (${count}), więc nie można go usunąć. Zamiast tego odznacz „Aktywny” w edycji — straci możliwość logowania, a historia zostanie.`,
+    };
+  }
+
+  const { error: deleteError } = await service.from("employees").delete().eq("id", id.data);
+  if (deleteError) return { ok: false, error: deleteError.message };
+  if (employee.user_id) {
+    const { error: accountError } = await service.auth.admin.deleteUser(employee.user_id);
+    if (accountError) {
+      return {
+        ok: false,
+        error: `Użytkownik został usunięty z listy, ale konta logowania nie udało się skasować: ${accountError.message}`,
+      };
+    }
   }
 
   revalidatePath("/uzytkownicy");

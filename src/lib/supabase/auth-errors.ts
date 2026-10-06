@@ -8,6 +8,9 @@ export function translateAuthError(message: string | undefined): string {
   if (m.includes("invalid login credentials")) {
     return "Nieprawidłowy adres e-mail lub hasło.";
   }
+  if (m.includes("banned")) {
+    return "To konto zostało dezaktywowane. Skontaktuj się z administratorem.";
+  }
   if (m.includes("email not confirmed")) {
     return "Adres e-mail nie został jeszcze potwierdzony. Sprawdź skrzynkę pocztową.";
   }

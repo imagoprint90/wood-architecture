@@ -1,25 +1,18 @@
-import { ActionForm } from "@/components/ui/ActionForm";
-import { FormField, inputClass } from "@/components/ui/Form";
-import {
-  createEmployeeAccountAction,
-  createUserAction,
-  updateUserAction,
-} from "@/lib/actions/employee-actions";
+import Link from "next/link";
+import { Pencil, Plus } from "lucide-react";
 import { requireAdmin } from "@/lib/auth";
 import { employeeName, formatMoney } from "@/lib/format";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { ROLE_LABELS, type AppRole, type Employee } from "@/lib/types";
+import { DeleteUserButton } from "./DeleteUserButton";
 
 interface Account {
   email: string | null;
   role: AppRole;
 }
 
-const ROLE_HINT =
-  "Administrator ma dostęp do wszystkiego. Raportujący widzi i dodaje wyłącznie własne raporty czasu pracy.";
-
 export default async function UzytkownicyPage() {
-  await requireAdmin();
+  const session = await requireAdmin();
   const supabase = await createSupabaseServerClient();
   const [employeesResult, profilesResult] = await Promise.all([
     supabase.from("employees").select("*").order("last_name").order("first_name"),
@@ -37,35 +30,48 @@ export default async function UzytkownicyPage() {
   );
 
   return (
-    <div className="flex flex-col gap-6">
-      <section className="rounded-xl border border-border bg-surface p-5">
-        <h1 className="text-base font-semibold">Nowy użytkownik</h1>
-        <p className="mt-0.5 text-xs text-muted">{ROLE_HINT}</p>
-        <ActionForm
-          action={createUserAction}
-          submitLabel="Dodaj użytkownika"
-          successMessage="Użytkownik został dodany. Przekaż mu e-mail i hasło startowe."
-          className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2"
+    <section className="rounded-xl border border-border bg-surface p-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-base font-semibold">Użytkownicy ({employees.length})</h1>
+        <Link
+          href="/uzytkownicy/nowy"
+          className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-primary-dark"
         >
-          <PersonFields suffix="new" />
-          <CredentialFields suffix="new" />
-        </ActionForm>
-      </section>
+          <Plus size={16} />
+          Dodaj użytkownika
+        </Link>
+      </div>
 
-      <section className="rounded-xl border border-border bg-surface p-5">
-        <h2 className="text-base font-semibold">Użytkownicy ({employees.length})</h2>
-        {employees.length === 0 ? (
-          <p className="mt-3 text-sm text-muted">Nie dodano jeszcze żadnego użytkownika.</p>
-        ) : (
-          <ul className="mt-3 divide-y divide-border">
-            {employees.map((employee) => {
-              const account = employee.user_id ? accounts.get(employee.user_id) : undefined;
-              return (
-                <li key={employee.id} className="py-3">
-                  <details>
-                    <summary className="flex cursor-pointer flex-wrap items-center gap-x-3 gap-y-1 text-sm">
-                      <span className="font-medium">{employeeName(employee)}</span>
-                      {account && (
+      {employees.length === 0 ? (
+        <p className="mt-4 text-sm text-muted">Nie dodano jeszcze żadnego użytkownika.</p>
+      ) : (
+        <div className="mt-4 overflow-x-auto">
+          <table className="w-full whitespace-nowrap text-sm">
+            <thead>
+              <tr className="border-b border-border text-left text-xs text-muted">
+                <th className="py-2 pr-4 font-medium">Imię i nazwisko</th>
+                <th className="py-2 pr-4 font-medium">E-mail (login)</th>
+                <th className="py-2 pr-4 font-medium">Rola</th>
+                <th className="py-2 pr-4 font-medium">Stanowisko</th>
+                <th className="py-2 pr-4 font-medium">Telefon</th>
+                <th className="py-2 pr-4 text-right font-medium">Stawka</th>
+                <th className="py-2 pr-4 font-medium">Status</th>
+                <th className="py-2 text-right font-medium">Akcje</th>
+              </tr>
+            </thead>
+            <tbody>
+              {employees.map((employee) => {
+                const account = employee.user_id ? accounts.get(employee.user_id) : undefined;
+                const isSelf = employee.user_id === session.userId;
+                return (
+                  <tr key={employee.id} className="border-b border-border align-top last:border-b-0">
+                    <td className="py-3 pr-4 font-medium">
+                      {employeeName(employee)}
+                      {isSelf && <span className="ml-2 text-xs font-normal text-muted">(Ty)</span>}
+                    </td>
+                    <td className="py-3 pr-4">{account?.email ?? <Muted>bez konta</Muted>}</td>
+                    <td className="py-3 pr-4">
+                      {account ? (
                         <span
                           className={
                             account.role === "admin"
@@ -75,158 +81,53 @@ export default async function UzytkownicyPage() {
                         >
                           {ROLE_LABELS[account.role]}
                         </span>
+                      ) : (
+                        <Muted>—</Muted>
                       )}
-                      {!employee.is_active && (
-                        <span className="rounded-full bg-black/5 px-2 py-0.5 text-xs">Nieaktywny</span>
+                    </td>
+                    <td className="py-3 pr-4">{employee.position ?? <Muted>—</Muted>}</td>
+                    <td className="py-3 pr-4">{employee.phone ?? <Muted>—</Muted>}</td>
+                    <td className="py-3 pr-4 text-right tabular-nums">
+                      {employee.hourly_rate !== null ? (
+                        `${formatMoney(Number(employee.hourly_rate))}/h`
+                      ) : (
+                        <Muted>—</Muted>
                       )}
-                      <span className="text-xs text-muted">
-                        {[
-                          account ? account.email : "bez konta",
-                          employee.position,
-                          employee.hourly_rate !== null
-                            ? `${formatMoney(Number(employee.hourly_rate))}/h`
-                            : null,
-                        ]
-                          .filter(Boolean)
-                          .join(" · ")}
+                    </td>
+                    <td className="py-3 pr-4">
+                      <span
+                        className={
+                          employee.is_active
+                            ? "rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-800"
+                            : "rounded-full bg-black/5 px-2 py-0.5 text-xs text-muted"
+                        }
+                      >
+                        {employee.is_active ? "Aktywny" : "Nieaktywny"}
                       </span>
-                    </summary>
-
-                    <ActionForm
-                      action={updateUserAction}
-                      submitLabel="Zapisz zmiany"
-                      className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2"
-                    >
-                      <input type="hidden" name="id" value={employee.id} />
-                      <PersonFields suffix={employee.id} employee={employee} />
-                      {account && (
-                        <FormField label="Rola" htmlFor={`role-${employee.id}`} required>
-                          <RoleSelect id={`role-${employee.id}`} defaultValue={account.role} />
-                        </FormField>
-                      )}
-                      <label className="flex items-center gap-2 self-end pb-2.5 text-sm">
-                        <input type="checkbox" name="is_active" defaultChecked={employee.is_active} />
-                        Aktywny (widoczny przy dodawaniu wpisów)
-                      </label>
-                    </ActionForm>
-
-                    {!account && (
-                      <div className="mt-5 rounded-lg border border-dashed border-border p-4">
-                        <h3 className="text-sm font-semibold">Załóż konto do logowania</h3>
-                        <ActionForm
-                          action={createEmployeeAccountAction}
-                          submitLabel="Załóż konto"
-                          successMessage="Konto zostało założone."
-                          className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2"
+                    </td>
+                    <td className="py-1.5">
+                      <div className="flex items-start justify-end gap-1">
+                        <Link
+                          href={`/uzytkownicy/${employee.id}`}
+                          className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm text-primary hover:bg-accent/10"
                         >
-                          <input type="hidden" name="employee_id" value={employee.id} />
-                          <CredentialFields suffix={`account-${employee.id}`} />
-                        </ActionForm>
+                          <Pencil size={15} />
+                          Edytuj
+                        </Link>
+                        {!isSelf && <DeleteUserButton id={employee.id} name={employeeName(employee)} />}
                       </div>
-                    )}
-                  </details>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </section>
-    </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
   );
 }
 
-// Sufiks odróżnia identyfikatory pól, gdy na stronie jest kilka formularzy naraz.
-function PersonFields({ suffix, employee }: { suffix: string; employee?: Employee }) {
-  return (
-    <>
-      <FormField label="Imię" htmlFor={`first-${suffix}`} required>
-        <input
-          id={`first-${suffix}`}
-          name="first_name"
-          required
-          defaultValue={employee?.first_name}
-          className={inputClass}
-        />
-      </FormField>
-      <FormField label="Nazwisko" htmlFor={`last-${suffix}`}>
-        <input
-          id={`last-${suffix}`}
-          name="last_name"
-          defaultValue={employee?.last_name}
-          className={inputClass}
-        />
-      </FormField>
-      <FormField label="Stanowisko" htmlFor={`position-${suffix}`}>
-        <input
-          id={`position-${suffix}`}
-          name="position"
-          defaultValue={employee?.position ?? ""}
-          className={inputClass}
-        />
-      </FormField>
-      <FormField label="Telefon" htmlFor={`phone-${suffix}`}>
-        <input
-          id={`phone-${suffix}`}
-          name="phone"
-          type="tel"
-          defaultValue={employee?.phone ?? ""}
-          className={inputClass}
-        />
-      </FormField>
-      <FormField label="Stawka godzinowa (zł)" htmlFor={`rate-${suffix}`}>
-        <input
-          id={`rate-${suffix}`}
-          name="hourly_rate"
-          type="text"
-          inputMode="decimal"
-          placeholder="np. 35 lub 42,50"
-          defaultValue={employee?.hourly_rate ?? ""}
-          className={inputClass}
-        />
-      </FormField>
-    </>
-  );
-}
-
-function CredentialFields({ suffix }: { suffix: string }) {
-  return (
-    <>
-      <FormField label="Rola" htmlFor={`role-${suffix}`} required>
-        <RoleSelect id={`role-${suffix}`} defaultValue="pracownik" />
-      </FormField>
-      <FormField label="Adres e-mail (login)" htmlFor={`email-${suffix}`} required>
-        <input
-          id={`email-${suffix}`}
-          name="email"
-          type="email"
-          required
-          autoComplete="off"
-          className={inputClass}
-        />
-      </FormField>
-      <FormField label="Hasło startowe (min. 8 znaków)" htmlFor={`password-${suffix}`} required>
-        <input
-          id={`password-${suffix}`}
-          name="password"
-          type="text"
-          required
-          minLength={8}
-          autoComplete="off"
-          className={inputClass}
-        />
-      </FormField>
-    </>
-  );
-}
-
-function RoleSelect({ id, defaultValue }: { id: string; defaultValue: AppRole }) {
-  return (
-    <select id={id} name="role" defaultValue={defaultValue} className={inputClass}>
-      {Object.entries(ROLE_LABELS).map(([value, label]) => (
-        <option key={value} value={value}>
-          {label}
-        </option>
-      ))}
-    </select>
-  );
+function Muted({ children }: { children: React.ReactNode }) {
+  return <span className="text-muted">{children}</span>;
 }
