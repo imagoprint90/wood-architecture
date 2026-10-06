@@ -61,7 +61,7 @@ export default async function UzytkownicyPage() {
               { label: "Stanowisko" },
               { label: "Telefon", className: "tabular-nums" },
               { label: "Stawka", align: "right" },
-              { label: "Dni wstecz", align: "right" },
+              { label: "Raportowanie wstecz (dni robocze)", align: "right" },
               { label: "Status" },
               { label: "Akcje", align: "right", sortable: false },
             ]}
