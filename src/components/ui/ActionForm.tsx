@@ -33,11 +33,14 @@ export function ActionForm({
       {children}
       <div
         className={clsx(
-          "flex gap-3 sm:col-span-2",
-          fullWidthSubmit ? "flex-col" : "mt-1 flex-wrap items-center border-t border-border pt-4"
+          // col-span-full: stopka zajmuje całą szerokość siatki formularza niezależnie od liczby kolumn.
+          "col-span-full flex gap-3",
+          fullWidthSubmit
+            ? "flex-col"
+            : "mt-1 flex-col border-t border-border pt-4 sm:flex-row sm:flex-wrap sm:items-center"
         )}
       >
-        <Button type="submit" disabled={pending} className={fullWidthSubmit ? "w-full" : undefined}>
+        <Button type="submit" disabled={pending} className={fullWidthSubmit ? "w-full" : "w-full sm:w-auto"}>
           {pending ? "Proszę czekać…" : submitLabel}
         </Button>
         {secondaryAction}

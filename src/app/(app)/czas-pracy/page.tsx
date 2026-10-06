@@ -4,6 +4,7 @@ import { Check, Pencil, Trash2, Undo2, X } from "lucide-react";
 import { ActionForm } from "@/components/ui/ActionForm";
 import { Button } from "@/components/ui/Button";
 import { Badge, Card, EmptyState, PageHeader } from "@/components/ui/Card";
+import { CollapsibleFilters } from "@/components/ui/CollapsibleFilters";
 import { FormField, inputClass, textareaClass } from "@/components/ui/Form";
 import { HoursInput } from "@/components/ui/HoursInput";
 import { SearchSelect } from "@/components/ui/SearchSelect";
@@ -128,6 +129,14 @@ export default async function CzasPracyPage({
     .filter((e) => e.status === "zatwierdzony")
     .reduce((sum, e) => sum + Number(e.hours), 0);
   const canReport = session.isAdmin || session.employeeId !== null;
+  // Ile filtrów odbiega od domyślnych (zakres dat liczony jako jeden) — pokazywane przy
+  // zwiniętym panelu, żeby było widać, że lista jest zawężona.
+  const activeFilters =
+    Number(from !== currentMonth.from || to !== currentMonth.to) +
+    Number(Boolean(projectFilter)) +
+    Number(Boolean(employeeFilter && session.isAdmin)) +
+    Number(Boolean(stageFilter)) +
+    Number(statusFilter in TIME_ENTRY_STATUS_LABELS);
 
   return (
     <>
@@ -159,7 +168,11 @@ export default async function CzasPracyPage({
               action={addTimeEntryAction}
               submitLabel="Dodaj wpis"
               successMessage="Dodano wpis."
-              className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2 lg:grid-cols-4"
+              className={clsx(
+                "grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2",
+                // Wszystkie krótkie pola w jednym rzędzie: 4 u raportującego, 5 u administratora.
+                session.isAdmin ? "xl:grid-cols-5" : "lg:grid-cols-4"
+              )}
             >
               {session.isAdmin && (
                 <FormField label="Pracownik" htmlFor="employee_id" required>
@@ -219,7 +232,7 @@ export default async function CzasPracyPage({
               <FormField label="Liczba godzin" htmlFor="hours" required>
                 <HoursInput id="hours" name="hours" required />
               </FormField>
-              <div className="sm:col-span-2 lg:col-span-4">
+              <div className="col-span-full">
                 <FormField label="Opis wykonanych prac" htmlFor="description">
                   <textarea id="description" name="description" rows={2} className={textareaClass} />
                 </FormField>
@@ -240,9 +253,10 @@ export default async function CzasPracyPage({
           }
           flush
         >
+          <CollapsibleFilters storageKey="czas-pracy-filtry" activeCount={activeFilters} clearHref="/czas-pracy">
           <form
             method="get"
-            className="grid grid-cols-2 gap-3 border-b border-border bg-subtle/60 px-5 py-3 sm:grid-cols-4 xl:grid-cols-7"
+            className="grid grid-cols-1 gap-3 px-4 py-3 min-[26rem]:grid-cols-2 sm:grid-cols-3 sm:px-5 xl:grid-cols-7"
           >
             <label className={filterLabelClass}>
               Od
@@ -304,6 +318,7 @@ export default async function CzasPracyPage({
               </Button>
             </div>
           </form>
+          </CollapsibleFilters>
 
           {entries.length === 0 ? (
             <EmptyState>Brak wpisów w wybranym okresie.</EmptyState>

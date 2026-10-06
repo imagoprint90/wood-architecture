@@ -68,7 +68,7 @@ export default async function EdycjaUzytkownikaPage({ params }: { params: Promis
                 <RoleSelect id="role" defaultValue={account.role} />
               </FormField>
             )}
-            <label className="flex items-start gap-2 sm:col-span-2">
+            <label className="flex items-start gap-2 col-span-full">
               <input
                 type="checkbox"
                 name="is_active"
@@ -86,7 +86,7 @@ export default async function EdycjaUzytkownikaPage({ params }: { params: Promis
             </label>
             {/* Wyłączone pole nie trafia do formularza — własne konto zawsze zostaje aktywne. */}
             {isSelf && <input type="hidden" name="is_active" value="on" />}
-            {account && <p className="text-xs text-muted sm:col-span-2">{ROLE_HINT}</p>}
+            {account && <p className="text-xs text-muted col-span-full">{ROLE_HINT}</p>}
           </ActionForm>
         </Card>
 

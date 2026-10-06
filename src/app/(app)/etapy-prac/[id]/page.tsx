@@ -55,7 +55,7 @@ export default async function EdycjaEtapuPage({ params }: { params: Promise<{ id
               className={inputClass}
             />
           </FormField>
-          <label className="flex items-start gap-2 sm:col-span-2">
+          <label className="flex items-start gap-2 col-span-full">
             <input
               type="checkbox"
               name="is_active"

@@ -112,7 +112,7 @@ export default async function EdycjaRaportuPage({ params }: { params: Promise<{ 
               className={textareaClass}
             />
           </FormField>
-          <p className="text-xs text-muted sm:col-span-2">
+          <p className="text-xs text-muted col-span-full">
             Po zapisaniu pracownik zobaczy przy tym raporcie informację, że został zmodyfikowany — z Twoim
             imieniem i nazwiskiem oraz datą zmiany.
           </p>

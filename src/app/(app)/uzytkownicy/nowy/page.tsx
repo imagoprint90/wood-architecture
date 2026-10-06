@@ -31,7 +31,7 @@ export default async function NowyUzytkownikPage() {
           <PersonFields />
           <FieldGroupTitle>Konto do logowania</FieldGroupTitle>
           <CredentialFields />
-          <p className="text-xs text-muted sm:col-span-2">{ROLE_HINT}</p>
+          <p className="text-xs text-muted col-span-full">{ROLE_HINT}</p>
         </ActionForm>
       </Card>
     </>

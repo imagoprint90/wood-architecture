@@ -77,9 +77,9 @@ export function HoursInput({
             step(-1);
           }
         }}
-        className={clsx(inputClass, "pr-9 tabular-nums")}
+        className={clsx(inputClass, "pr-13 tabular-nums lg:pr-9")}
       />
-      <div className="absolute inset-y-px right-px flex w-7 flex-col overflow-hidden rounded-r-md border-l border-border">
+      <div className="absolute inset-y-px right-px flex w-11 flex-col overflow-hidden rounded-r-md border-l border-border lg:w-7">
         <button
           type="button"
           tabIndex={-1}

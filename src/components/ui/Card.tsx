@@ -55,7 +55,7 @@ export function Card({
       )}
     >
       {title && (
-        <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-3">
+        <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3 sm:px-5">
           <div className="min-w-0">
             <h2 className="text-sm font-semibold">{title}</h2>
             {description && <p className="text-xs text-muted">{description}</p>}
@@ -63,7 +63,7 @@ export function Card({
           {actions}
         </header>
       )}
-      <div className={flush ? undefined : "p-5"}>{children}</div>
+      <div className={flush ? undefined : "p-4 sm:p-5"}>{children}</div>
     </section>
   );
 }

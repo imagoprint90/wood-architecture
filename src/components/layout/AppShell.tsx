@@ -89,7 +89,7 @@ export function AppShell({ session, children }: { session: SessionContext; child
         </div>
       </header>
 
-      <main className="flex-1 px-4 py-6 lg:pr-8 lg:pl-68">
+      <main className="flex-1 px-3 py-4 sm:px-4 sm:py-6 lg:pr-8 lg:pl-68">
         {children}
       </main>
       <Footer className="border-t border-border px-4 py-3 lg:pr-8 lg:pl-68" />

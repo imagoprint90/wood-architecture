@@ -59,7 +59,7 @@ export function ProjectFields({
         <textarea id="notes" name="notes" rows={3} defaultValue={project?.notes ?? ""} className={textareaClass} />
       </FormField>
 
-      <div className="border-t border-border pt-4 sm:col-span-2">
+      <div className="border-t border-border pt-4 col-span-full">
         <h3 className="text-xs font-semibold tracking-wider text-muted uppercase">
           Przydzieleni pracownicy
         </h3>

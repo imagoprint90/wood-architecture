@@ -16,7 +16,7 @@ export function FormField({
   children: ReactNode;
 }) {
   return (
-    <div className={full ? "sm:col-span-2" : undefined}>
+    <div className={full ? "col-span-full" : undefined}>
       <label htmlFor={htmlFor} className="mb-1 block text-xs font-medium text-foreground/80">
         {label}
         {required && <span className="text-danger"> *</span>}
