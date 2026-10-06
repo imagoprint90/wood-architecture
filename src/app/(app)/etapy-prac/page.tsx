@@ -5,7 +5,9 @@ import { buttonClass } from "@/components/ui/Button";
 import { Badge, Card, EmptyState, PageHeader } from "@/components/ui/Card";
 import { DeleteButton } from "@/components/ui/DeleteButton";
 import { FormField, inputClass } from "@/components/ui/Form";
-import { Dash, Table, Td, Th, Tr } from "@/components/ui/Table";
+import { SortableTable } from "@/components/ui/SortableTable";
+import { cells } from "@/components/ui/table-cells";
+import { Dash } from "@/components/ui/Table";
 import { deleteStageAction, saveStageAction } from "@/lib/actions/stage-actions";
 import { requireAdmin } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -55,49 +57,36 @@ export default async function EtapyPracPage() {
           {stages.length === 0 ? (
             <EmptyState>Nie dodano jeszcze żadnego etapu.</EmptyState>
           ) : (
-            <Table>
-              <thead>
-                <tr>
-                  <Th align="right">Kolejność</Th>
-                  <Th>Nazwa etapu</Th>
-                  <Th>Status</Th>
-                  <Th align="right">Liczba wpisów</Th>
-                  <Th align="right">Akcje</Th>
-                </tr>
-              </thead>
-              <tbody>
-                {stages.map((stage) => (
-                  <Tr key={stage.id}>
-                    <Td align="right" className="w-0 text-muted">
-                      {stage.sort_order}
-                    </Td>
-                    <Td className="font-medium">{stage.name}</Td>
-                    <Td>
-                      <Badge tone={stage.is_archived ? "neutral" : "success"}>
-                        {stage.is_archived ? "Wyłączony" : "Aktywny"}
-                      </Badge>
-                    </Td>
-                    <Td align="right">{usage.get(stage.id) ?? <Dash />}</Td>
-                    <Td>
-                      <div className="flex items-start justify-end gap-1">
-                        <Link
-                          href={`/etapy-prac/${stage.id}`}
-                          className={buttonClass("ghost", "sm", "text-primary")}
-                        >
-                          <Pencil size={14} />
-                          Edytuj
-                        </Link>
-                        <DeleteButton
-                          action={deleteStageAction}
-                          id={stage.id}
-                          confirmMessage={`Usunąć etap „${stage.name}”? Tego nie da się cofnąć.`}
-                        />
-                      </div>
-                    </Td>
-                  </Tr>
-                ))}
-              </tbody>
-            </Table>
+            <SortableTable
+              columns={[
+                { label: "Nazwa etapu", className: "font-medium" },
+                { label: "Status" },
+                { label: "Liczba wpisów", align: "right" },
+                { label: "Akcje", align: "right", sortable: false },
+              ]}
+              rows={stages.map((stage) => ({
+                key: stage.id,
+                sort: [stage.name, stage.is_archived ? "Wyłączony" : "Aktywny", usage.get(stage.id) ?? 0, null],
+                cells: cells(
+                  stage.name,
+                  <Badge tone={stage.is_archived ? "neutral" : "success"}>
+                    {stage.is_archived ? "Wyłączony" : "Aktywny"}
+                  </Badge>,
+                  usage.get(stage.id) ?? <Dash />,
+                  <div className="flex items-start justify-end gap-1">
+                    <Link href={`/etapy-prac/${stage.id}`} className={buttonClass("ghost", "sm", "text-primary")}>
+                      <Pencil size={14} />
+                      Edytuj
+                    </Link>
+                    <DeleteButton
+                      action={deleteStageAction}
+                      id={stage.id}
+                      confirmMessage={`Usunąć etap „${stage.name}”? Tego nie da się cofnąć.`}
+                    />
+                  </div>,
+                ),
+              }))}
+            />
           )}
         </Card>
       </div>

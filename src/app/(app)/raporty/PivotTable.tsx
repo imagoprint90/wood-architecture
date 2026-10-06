@@ -114,8 +114,9 @@ export function PivotTable({
       <table className="w-full border-separate border-spacing-0 whitespace-nowrap">
         <thead>
           <tr>
+            <th className={clsx(headBase, "w-0 py-2 pr-2 pl-5 text-right")}>L.p.</th>
             <th aria-sort={ariaSort("label")} className={clsx(headBase, stickyFirst)}>
-              {sortButton("label", "left", "pr-3 pl-5", <>{rowLabel}</>)}
+              {sortButton("label", "left", "px-3", <>{rowLabel}</>)}
             </th>
             {pivot.columns.map((column, i) => (
               <th
@@ -146,12 +147,15 @@ export function PivotTable({
           </tr>
         </thead>
         <tbody>
-          {rows.map((row) => (
+          {rows.map((row, position) => (
             <tr key={row.key} className="group">
+              <td className="border-b border-border py-2 pr-2 pl-5 text-right text-muted tabular-nums group-hover:bg-subtle/70">
+                {position + 1}
+              </td>
               <td
                 className={clsx(
                   stickyFirst,
-                  "border-b border-border bg-surface py-2 pr-3 pl-5 font-medium group-hover:bg-subtle"
+                  "border-b border-border bg-surface px-3 py-2 font-medium group-hover:bg-subtle"
                 )}
               >
                 {row.label}
@@ -198,7 +202,8 @@ export function PivotTable({
         </tbody>
         <tfoot>
           <tr className="font-semibold">
-            <td className={clsx(stickyFirst, "bg-subtle py-2.5 pr-3 pl-5")}>Razem</td>
+            <td className="bg-subtle" />
+            <td className={clsx(stickyFirst, "bg-subtle px-3 py-2.5")}>Razem</td>
             {pivot.columnTotals.map((value, i) => (
               <td
                 key={pivot.columns[i].key}

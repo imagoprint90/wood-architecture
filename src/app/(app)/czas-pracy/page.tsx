@@ -5,7 +5,9 @@ import { Button } from "@/components/ui/Button";
 import { Badge, Card, EmptyState, PageHeader } from "@/components/ui/Card";
 import { FormField, inputClass, textareaClass } from "@/components/ui/Form";
 import { SearchSelect } from "@/components/ui/SearchSelect";
-import { Dash, Table, Td, Th, Tr } from "@/components/ui/Table";
+import { SortableTable } from "@/components/ui/SortableTable";
+import { cells } from "@/components/ui/table-cells";
+import { Dash } from "@/components/ui/Table";
 import {
   addTimeEntryAction,
   deleteTimeEntryAction,
@@ -290,95 +292,92 @@ export default async function CzasPracyPage({
           {entries.length === 0 ? (
             <EmptyState>Brak wpisów w wybranym okresie.</EmptyState>
           ) : (
-            <Table>
-              <thead>
-                <tr>
-                  <Th>Data</Th>
-                  <Th>Budowa</Th>
-                  {session.isAdmin && <Th>Pracownik</Th>}
-                  <Th>Etap prac</Th>
-                  <Th>Opis</Th>
-                  <Th align="right">Godziny</Th>
-                  <Th>Status</Th>
-                  <Th align="right">Akcje</Th>
-                </tr>
-              </thead>
-              <tbody>
-                {entries.map((entry) => {
-                  const canDelete = session.isAdmin || entry.status === "zgloszony";
-                  return (
-                    <Tr key={entry.id}>
-                      <Td className="tabular-nums">{formatDate(entry.work_date)}</Td>
-                      <Td className="font-medium">{entry.projects?.name ?? <Dash />}</Td>
-                      {session.isAdmin && <Td>{employeeName(entry.employees)}</Td>}
-                      <Td>{entry.work_categories?.name ?? <Dash />}</Td>
-                      <Td className="max-w-xs truncate text-muted">
-                        {entry.description ? (
-                          <span title={entry.description}>{entry.description}</span>
-                        ) : (
-                          <Dash />
-                        )}
-                      </Td>
-                      <Td align="right" className="font-semibold">
-                        {formatHours(Number(entry.hours))}
-                      </Td>
-                      <Td>
-                        <Badge tone={STATUS_TONES[entry.status]}>
-                          {TIME_ENTRY_STATUS_LABELS[entry.status]}
-                        </Badge>
-                      </Td>
-                      <Td>
-                        <div className="flex items-center justify-end">
-                          {session.isAdmin && entry.status !== "zatwierdzony" && (
-                            <EntryButton
-                              action={setTimeEntryStatusAction}
-                              id={entry.id}
-                              status="zatwierdzony"
-                              label="Zatwierdź"
-                              className="text-success hover:bg-success/10"
-                            >
-                              <Check size={15} />
-                            </EntryButton>
-                          )}
-                          {session.isAdmin && entry.status === "zgloszony" && (
-                            <EntryButton
-                              action={setTimeEntryStatusAction}
-                              id={entry.id}
-                              status="odrzucony"
-                              label="Odrzuć"
-                              className="text-danger hover:bg-danger/10"
-                            >
-                              <X size={15} />
-                            </EntryButton>
-                          )}
-                          {session.isAdmin && entry.status !== "zgloszony" && (
-                            <EntryButton
-                              action={setTimeEntryStatusAction}
-                              id={entry.id}
-                              status="zgloszony"
-                              label="Cofnij do zgłoszonych"
-                              className="text-muted hover:bg-foreground/5 hover:text-foreground"
-                            >
-                              <Undo2 size={15} />
-                            </EntryButton>
-                          )}
-                          {canDelete && (
-                            <EntryButton
-                              action={deleteTimeEntryAction}
-                              id={entry.id}
-                              label="Usuń wpis"
-                              className="text-muted hover:bg-danger/10 hover:text-danger"
-                            >
-                              <Trash2 size={15} />
-                            </EntryButton>
-                          )}
-                        </div>
-                      </Td>
-                    </Tr>
-                  );
-                })}
-              </tbody>
-            </Table>
+            <SortableTable
+              columns={[
+                { label: "Data", className: "tabular-nums" },
+                { label: "Budowa", className: "font-medium" },
+                ...(session.isAdmin ? [{ label: "Pracownik" }] : []),
+                { label: "Etap prac" },
+                { label: "Opis", className: "max-w-xs truncate text-muted" },
+                { label: "Godziny", align: "right" as const, className: "font-semibold" },
+                { label: "Status" },
+                { label: "Akcje", align: "right" as const, sortable: false },
+              ]}
+              rows={entries.map((entry) => {
+                const canDelete = session.isAdmin || entry.status === "zgloszony";
+                return {
+                  key: entry.id,
+                  sort: [
+                    entry.work_date,
+                    entry.projects?.name ?? null,
+                    ...(session.isAdmin
+                      ? [entry.employees ? `${entry.employees.last_name} ${entry.employees.first_name}`.trim() : null]
+                      : []),
+                    entry.work_categories?.name ?? null,
+                    entry.description,
+                    Number(entry.hours),
+                    TIME_ENTRY_STATUS_LABELS[entry.status],
+                    null,
+                  ],
+                  cells: cells(
+                    formatDate(entry.work_date),
+                    entry.projects?.name ?? <Dash />,
+                    ...(session.isAdmin ? [employeeName(entry.employees)] : []),
+                    entry.work_categories?.name ?? <Dash />,
+                    entry.description ? <span title={entry.description}>{entry.description}</span> : <Dash />,
+                    formatHours(Number(entry.hours)),
+                    <Badge tone={STATUS_TONES[entry.status]}>
+                      {TIME_ENTRY_STATUS_LABELS[entry.status]}
+                    </Badge>,
+                    <div className="flex items-center justify-end">
+                      {session.isAdmin && entry.status !== "zatwierdzony" && (
+                        <EntryButton
+                          action={setTimeEntryStatusAction}
+                          id={entry.id}
+                          status="zatwierdzony"
+                          label="Zatwierdź"
+                          className="text-success hover:bg-success/10"
+                        >
+                          <Check size={15} />
+                        </EntryButton>
+                      )}
+                      {session.isAdmin && entry.status === "zgloszony" && (
+                        <EntryButton
+                          action={setTimeEntryStatusAction}
+                          id={entry.id}
+                          status="odrzucony"
+                          label="Odrzuć"
+                          className="text-danger hover:bg-danger/10"
+                        >
+                          <X size={15} />
+                        </EntryButton>
+                      )}
+                      {session.isAdmin && entry.status !== "zgloszony" && (
+                        <EntryButton
+                          action={setTimeEntryStatusAction}
+                          id={entry.id}
+                          status="zgloszony"
+                          label="Cofnij do zgłoszonych"
+                          className="text-muted hover:bg-foreground/5 hover:text-foreground"
+                        >
+                          <Undo2 size={15} />
+                        </EntryButton>
+                      )}
+                      {canDelete && (
+                        <EntryButton
+                          action={deleteTimeEntryAction}
+                          id={entry.id}
+                          label="Usuń wpis"
+                          className="text-muted hover:bg-danger/10 hover:text-danger"
+                        >
+                          <Trash2 size={15} />
+                        </EntryButton>
+                      )}
+                    </div>,
+                  ),
+                };
+              })}
+            />
           )}
         </Card>
       </div>

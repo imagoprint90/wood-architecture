@@ -3,7 +3,9 @@ import { Pencil, Plus } from "lucide-react";
 import { buttonClass } from "@/components/ui/Button";
 import { DeleteButton } from "@/components/ui/DeleteButton";
 import { Badge, Card, EmptyState, PageHeader } from "@/components/ui/Card";
-import { Dash, Table, Td, Th, Tr } from "@/components/ui/Table";
+import { SortableTable } from "@/components/ui/SortableTable";
+import { cells } from "@/components/ui/table-cells";
+import { Dash } from "@/components/ui/Table";
 import { deleteUserAction } from "@/lib/actions/employee-actions";
 import { requireAdmin } from "@/lib/auth";
 import { employeeName, formatMoney } from "@/lib/format";
@@ -50,76 +52,67 @@ export default async function UzytkownicyPage() {
         {employees.length === 0 ? (
           <EmptyState>Nie dodano jeszcze żadnego użytkownika.</EmptyState>
         ) : (
-          <Table>
-            <thead>
-              <tr>
-                <Th>Imię i nazwisko</Th>
-                <Th>E-mail (login)</Th>
-                <Th>Rola</Th>
-                <Th>Stanowisko</Th>
-                <Th>Telefon</Th>
-                <Th align="right">Stawka</Th>
-                <Th>Status</Th>
-                <Th align="right">Akcje</Th>
-              </tr>
-            </thead>
-            <tbody>
-              {employees.map((employee) => {
-                const account = employee.user_id ? accounts.get(employee.user_id) : undefined;
-                const isSelf = employee.user_id === session.userId;
-                return (
-                  <Tr key={employee.id}>
-                    <Td className="font-medium">
-                      {employeeName(employee)}
-                      {isSelf && <span className="ml-1.5 text-xs font-normal text-muted">(Ty)</span>}
-                    </Td>
-                    <Td>{account?.email ?? <span className="text-muted">bez konta</span>}</Td>
-                    <Td>
-                      {account ? (
-                        <Badge tone={account.role === "admin" ? "primary" : "accent"}>
-                          {ROLE_LABELS[account.role]}
-                        </Badge>
-                      ) : (
-                        <Dash />
-                      )}
-                    </Td>
-                    <Td>{employee.position ?? <Dash />}</Td>
-                    <Td className="tabular-nums">{employee.phone ?? <Dash />}</Td>
-                    <Td align="right">
-                      {employee.hourly_rate !== null ? (
-                        `${formatMoney(Number(employee.hourly_rate))}/h`
-                      ) : (
-                        <Dash />
-                      )}
-                    </Td>
-                    <Td>
-                      <Badge tone={employee.is_active ? "success" : "neutral"}>
-                        {employee.is_active ? "Aktywny" : "Nieaktywny"}
-                      </Badge>
-                    </Td>
-                    <Td>
-                      <div className="flex items-start justify-end gap-1">
-                        <Link
-                          href={`/uzytkownicy/${employee.id}`}
-                          className={buttonClass("ghost", "sm", "text-primary")}
-                        >
-                          <Pencil size={14} />
-                          Edytuj
-                        </Link>
-                        {!isSelf && (
-                          <DeleteButton
-                            action={deleteUserAction}
-                            id={employee.id}
-                            confirmMessage={`Usunąć użytkownika „${employeeName(employee)}” razem z kontem logowania? Tego nie da się cofnąć.`}
-                          />
-                        )}
-                      </div>
-                    </Td>
-                  </Tr>
-                );
-              })}
-            </tbody>
-          </Table>
+          <SortableTable
+            columns={[
+              { label: "Imię i nazwisko", className: "font-medium" },
+              { label: "E-mail (login)" },
+              { label: "Rola" },
+              { label: "Stanowisko" },
+              { label: "Telefon", className: "tabular-nums" },
+              { label: "Stawka", align: "right" },
+              { label: "Status" },
+              { label: "Akcje", align: "right", sortable: false },
+            ]}
+            rows={employees.map((employee) => {
+              const account = employee.user_id ? accounts.get(employee.user_id) : undefined;
+              const isSelf = employee.user_id === session.userId;
+              return {
+                key: employee.id,
+                sort: [
+                  // Sortowanie po nazwisku, tak jak na listach płacowych.
+                  `${employee.last_name} ${employee.first_name}`.trim(),
+                  account?.email ?? null,
+                  account ? ROLE_LABELS[account.role] : null,
+                  employee.position,
+                  employee.phone,
+                  employee.hourly_rate === null ? null : Number(employee.hourly_rate),
+                  employee.is_active ? "Aktywny" : "Nieaktywny",
+                  null,
+                ],
+                cells: cells(
+                  <span>
+                    {employeeName(employee)}
+                    {isSelf && <span className="ml-1.5 text-xs font-normal text-muted">(Ty)</span>}
+                  </span>,
+                  account?.email ?? <span className="text-muted">bez konta</span>,
+                  account ? (
+                    <Badge tone={account.role === "admin" ? "primary" : "accent"}>{ROLE_LABELS[account.role]}</Badge>
+                  ) : (
+                    <Dash />
+                  ),
+                  employee.position ?? <Dash />,
+                  employee.phone ?? <Dash />,
+                  employee.hourly_rate !== null ? `${formatMoney(Number(employee.hourly_rate))}/h` : <Dash />,
+                  <Badge tone={employee.is_active ? "success" : "neutral"}>
+                    {employee.is_active ? "Aktywny" : "Nieaktywny"}
+                  </Badge>,
+                  <div className="flex items-start justify-end gap-1">
+                    <Link href={`/uzytkownicy/${employee.id}`} className={buttonClass("ghost", "sm", "text-primary")}>
+                      <Pencil size={14} />
+                      Edytuj
+                    </Link>
+                    {!isSelf && (
+                      <DeleteButton
+                        action={deleteUserAction}
+                        id={employee.id}
+                        confirmMessage={`Usunąć użytkownika „${employeeName(employee)}” razem z kontem logowania? Tego nie da się cofnąć.`}
+                      />
+                    )}
+                  </div>,
+                ),
+              };
+            })}
+          />
         )}
       </Card>
     </>
