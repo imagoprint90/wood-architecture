@@ -192,13 +192,22 @@ export default async function RaportyPage({
             </div>
           </form>
 
-          {params.continuity && (
-            <p className="border-b border-border px-5 py-2.5 text-xs text-muted">
-              Suma godzin każdego pracownika ze wszystkich budów.{" "}
-              <span className="rounded bg-warning/25 px-1.5 py-0.5 font-medium text-warning">Brak</span>{" "}
-              oznacza dzień roboczy (pon.–pt., bez świąt, do dziś) bez żadnego wpisu.
-            </p>
-          )}
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 border-b border-border px-4 py-2.5 text-xs text-muted sm:px-5">
+            {params.continuity && <span>Suma godzin każdego pracownika ze wszystkich budów.</span>}
+            <span className="flex items-center gap-1.5">
+              <span className="rounded bg-warning/14 px-1.5 py-0.5 font-semibold text-warning">8</span>
+              godziny czekające na zatwierdzenie (także gdy w komórce zatwierdzona jest tylko część)
+            </span>
+            {params.continuity && (
+              <span className="flex items-center gap-1.5">
+                <span className="rounded px-1.5 py-0.5 font-semibold text-danger ring-1 ring-danger/60 ring-inset">
+                  !
+                </span>
+                dzień roboczy (pon.–pt., bez świąt, do dziś) bez żadnego wpisu
+              </span>
+            )}
+            <span>Najedź na komórkę z godzinami, żeby zobaczyć szczegóły wpisów.</span>
+          </div>
 
           {pivot.rows.length === 0 ? (
             <EmptyState>Brak danych dla wybranych filtrów.</EmptyState>

@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { isIsoMonth, monthRange, todayIso } from "@/lib/format";
+import { formatDate, formatDateTime, isIsoMonth, monthRange, todayIso } from "@/lib/format";
 import { polishHolidays } from "@/lib/holidays";
 import type { Employee, Project, TimeEntry, WorkCategory } from "@/lib/types";
 
@@ -60,15 +60,36 @@ export interface PivotRow {
   label: string;
   values: number[];
   total: number;
+  // Dla każdej kolumny: indeksy wpisów (w Pivot.details), z których powstała komórka.
+  entries: number[][];
+  // Dla każdej kolumny: czy komórka zawiera choć jeden wpis czekający na zatwierdzenie.
+  pending: boolean[];
   // Tylko w trybie ciągłości: które kolumny to dni robocze bez wpisu.
   missing?: boolean[];
   reportedDays?: number;
   missingDays?: number;
 }
 
+// Pojedynczy wpis czasu pracy w postaci gotowej do pokazania w dymku nad komórką.
+export interface EntryDetail {
+  date: string;
+  employee: string;
+  project: string;
+  stage: string;
+  hours: number;
+  cost: number;
+  approved: boolean;
+  description: string | null;
+  // „Jan Kowalski, 06.10.2026, 14:32” — kto i kiedy dodał wpis.
+  createdLabel: string;
+  // To samo dla modyfikacji przez administratora (null = wpis niezmieniany).
+  editedLabel: string | null;
+}
+
 export interface Pivot {
   columns: PivotColumn[];
   rows: PivotRow[];
+  details: EntryDetail[];
   columnTotals: number[];
   grandTotal: number;
 }
@@ -239,7 +260,8 @@ export async function loadReport(supabase: SupabaseClient, params: ReportParams)
   if (params.employeeId) entriesQuery = entriesQuery.eq("employee_id", params.employeeId);
   if (params.categoryId) entriesQuery = entriesQuery.eq("work_category_id", params.categoryId);
 
-  const [entriesResult, employeesResult, projectsResult, categoriesResult, membersResult] = await Promise.all([
+  const [entriesResult, employeesResult, projectsResult, categoriesResult, membersResult, profilesResult] =
+    await Promise.all([
     entriesQuery,
     supabase.from("employees").select("*").order("last_name").order("first_name"),
     supabase.from("projects").select("*").order("name"),
@@ -247,7 +269,12 @@ export async function loadReport(supabase: SupabaseClient, params: ReportParams)
     params.projectId
       ? supabase.from("project_members").select("employee_id").eq("project_id", params.projectId)
       : Promise.resolve({ data: null, error: null }),
+    // Nazwy kont — do informacji „kto dodał wpis”.
+    supabase.from("profiles").select("id, full_name, email"),
   ]);
+  const accountNames = new Map(
+    (profilesResult.data ?? []).map((p) => [p.id as string, (p.full_name || p.email || "—") as string])
+  );
   const loadError =
     entriesResult.error ?? employeesResult.error ?? projectsResult.error ?? categoriesResult.error;
   if (loadError) throw new Error(loadError.message);
@@ -323,6 +350,8 @@ export async function loadReport(supabase: SupabaseClient, params: ReportParams)
       label: labels[rowDim].get(key) ?? "—",
       values: columns.map(() => 0),
       total: 0,
+      entries: columns.map(() => []),
+      pending: columns.map(() => false),
     })),
     rowDim
   );
@@ -330,6 +359,9 @@ export async function loadReport(supabase: SupabaseClient, params: ReportParams)
 
   const totals = { hours: 0, approvedHours: 0, cost: 0, entries: entries.length };
   let missingRate = false;
+  const details: EntryDetail[] = [];
+  // Wpisy w kolejności dat — w tej kolejności pokażą się w dymku nad komórką.
+  entries.sort((a, b) => a.work_date.localeCompare(b.work_date));
   for (const entry of entries) {
     const hours = Number(entry.hours);
     const cost = hours * Number(entry.hourly_rate_snapshot ?? 0);
@@ -342,15 +374,36 @@ export async function loadReport(supabase: SupabaseClient, params: ReportParams)
     const column = columnIndex.get(entryKey(entry, params.colDim));
     const amount = params.value === "koszt" ? cost : hours;
     row.total += amount;
-    if (column !== undefined) row.values[column] += amount;
+    if (column === undefined) continue;
+    row.values[column] += amount;
+    row.entries[column].push(details.length);
+    if (entry.status !== "zatwierdzony") row.pending[column] = true;
+
+    const author = entry.created_by ? accountNames.get(entry.created_by) : undefined;
+    details.push({
+      date: formatDate(entry.work_date),
+      employee: reportName(entry.employees),
+      project: entry.projects?.name ?? "—",
+      stage: entry.work_categories?.name ?? "Bez etapu",
+      hours,
+      cost,
+      approved: entry.status === "zatwierdzony",
+      description: entry.description,
+      createdLabel: [author ?? "—", entry.created_at ? formatDateTime(entry.created_at) : null]
+        .filter(Boolean)
+        .join(", "),
+      editedLabel: entry.edited_at
+        ? `${entry.edited_by_name ?? "administrator"}, ${formatDateTime(entry.edited_at)}`
+        : null,
+    });
   }
 
   if (params.continuity) {
     const today = todayIso();
     for (const row of rows) {
       // Dzień roboczy = poniedziałek–piątek, niebędący świętem, nie w przyszłości.
-      row.missing = columns.map((c, i) => !c.tone && c.key <= today && row.values[i] === 0);
-      row.reportedDays = row.values.filter((v) => v > 0).length;
+      row.missing = columns.map((c, i) => !c.tone && c.key <= today && row.entries[i].length === 0);
+      row.reportedDays = row.entries.filter((cell) => cell.length > 0).length;
       row.missingDays = row.missing.filter(Boolean).length;
     }
   }
@@ -360,7 +413,7 @@ export async function loadReport(supabase: SupabaseClient, params: ReportParams)
 
   return {
     params,
-    pivot: { columns, rows, columnTotals, grandTotal },
+    pivot: { columns, rows, details, columnTotals, grandTotal },
     totals,
     missingRate,
     employees,

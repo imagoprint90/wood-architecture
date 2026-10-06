@@ -63,6 +63,8 @@ export interface TimeEntry {
   description: string | null;
   status: TimeEntryStatus;
   hourly_rate_snapshot: number | null;
+  created_by?: string | null;
+  created_at?: string;
   // Ślad po edycji przez administratora (puste = raport niezmieniany).
   edited_by_name?: string | null;
   edited_at?: string | null;
