@@ -50,6 +50,8 @@ export default async function RaportyPage({
   const { pivot, totals } = report;
   // Ile filtrów zawęża lub zmienia dane (układ wierszy i kolumn to nie filtr) — widoczne
   // także przy zwiniętym panelu.
+  // Godziny niezatwierdzone wśród pokazanych wpisów (odrzucone w ogóle nie trafiają do raportu).
+  const pendingHours = totals.hours - totals.approvedHours;
   const activeFilters =
     Number(Boolean(params.projectId)) +
     Number(Boolean(params.categoryId)) +
@@ -216,16 +218,26 @@ export default async function RaportyPage({
 
           <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 border-b border-border px-4 py-2.5 text-xs text-muted sm:px-5">
             {params.continuity && <span>Suma godzin każdego pracownika ze wszystkich budów.</span>}
+            {/* Sama próbka koloru, bez liczby — liczba w legendzie wyglądała jak wynik. */}
             <span className="flex items-center gap-1.5">
-              <span className="rounded bg-warning/14 px-1.5 py-0.5 font-semibold text-warning">8</span>
-              godziny czekające na zatwierdzenie (także gdy w komórce zatwierdzona jest tylko część)
+              <span
+                aria-hidden
+                className="inline-block size-3.5 rounded-sm bg-warning/14 ring-1 ring-warning/50 ring-inset"
+              />
+              pomarańczowe pole = godziny czekające na zatwierdzenie (także gdy w komórce zatwierdzona
+              jest tylko część)
             </span>
+            {pendingHours > 0 && (
+              <span className="font-semibold text-warning">
+                Do zatwierdzenia w tym widoku: {formatHours(pendingHours)}
+              </span>
+            )}
             {params.continuity && (
               <span className="flex items-center gap-1.5">
                 <span className="rounded px-1.5 py-0.5 font-semibold text-danger ring-1 ring-danger/60 ring-inset">
                   !
                 </span>
-                dzień roboczy (pon.–pt., bez świąt, do dziś) bez żadnego wpisu
+                = dzień roboczy (pon.–pt., bez świąt, do dziś) bez żadnego wpisu
               </span>
             )}
             <span>Najedź na komórkę z godzinami, żeby zobaczyć szczegóły wpisów.</span>
