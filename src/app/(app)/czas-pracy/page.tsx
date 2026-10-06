@@ -4,6 +4,7 @@ import { ActionForm } from "@/components/ui/ActionForm";
 import { Button } from "@/components/ui/Button";
 import { Badge, Card, EmptyState, PageHeader } from "@/components/ui/Card";
 import { FormField, inputClass, textareaClass } from "@/components/ui/Form";
+import { SearchSelect } from "@/components/ui/SearchSelect";
 import { Dash, Table, Td, Th, Tr } from "@/components/ui/Table";
 import {
   addTimeEntryAction,
@@ -55,6 +56,7 @@ export default async function CzasPracyPage({
   const projectFilter = single(params.budowa);
   const employeeFilter = single(params.pracownik);
   const statusFilter = single(params.status);
+  const stageFilter = single(params.etap);
 
   const supabase = await createSupabaseServerClient();
   let entriesQuery = supabase
@@ -66,12 +68,13 @@ export default async function CzasPracyPage({
     .order("created_at", { ascending: false });
   if (projectFilter) entriesQuery = entriesQuery.eq("project_id", projectFilter);
   if (employeeFilter && session.isAdmin) entriesQuery = entriesQuery.eq("employee_id", employeeFilter);
+  if (stageFilter) entriesQuery = entriesQuery.eq("work_category_id", stageFilter);
   if (statusFilter in TIME_ENTRY_STATUS_LABELS) entriesQuery = entriesQuery.eq("status", statusFilter);
 
   const [entriesResult, projectsResult, categoriesResult, employeesResult] = await Promise.all([
     entriesQuery,
     supabase.from("projects").select("*").order("name"),
-    supabase.from("work_categories").select("id, name").eq("is_archived", false).order("sort_order"),
+    supabase.from("work_categories").select("*").order("sort_order").order("name"),
     session.isAdmin
       ? supabase.from("employees").select("*").order("last_name").order("first_name")
       : Promise.resolve({ data: [], error: null }),
@@ -168,15 +171,13 @@ export default async function CzasPracyPage({
                   ))}
                 </select>
               </FormField>
-              <FormField label="Rodzaj prac" htmlFor="work_category_id">
-                <select id="work_category_id" name="work_category_id" defaultValue="" className={inputClass}>
-                  <option value="">— nie wybrano —</option>
-                  {categories.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
+              <FormField label="Etap prac" htmlFor="work_category_id" required>
+                <SearchSelect
+                  id="work_category_id"
+                  name="work_category_id"
+                  options={categories.filter((c) => !c.is_archived).map((c) => ({ id: c.id, label: c.name }))}
+                  placeholder="Wybierz lub wpisz, aby wyszukać…"
+                />
               </FormField>
               <FormField label="Data" htmlFor="work_date" required>
                 <input
@@ -223,7 +224,7 @@ export default async function CzasPracyPage({
         >
           <form
             method="get"
-            className="grid grid-cols-2 gap-3 border-b border-border bg-subtle/60 px-5 py-3 sm:grid-cols-3 lg:grid-cols-6"
+            className="grid grid-cols-2 gap-3 border-b border-border bg-subtle/60 px-5 py-3 sm:grid-cols-4 xl:grid-cols-7"
           >
             <label className={filterLabelClass}>
               Od
@@ -258,6 +259,17 @@ export default async function CzasPracyPage({
               </label>
             )}
             <label className={filterLabelClass}>
+              Etap prac
+              <select name="etap" defaultValue={stageFilter} className={inputClass}>
+                <option value="">Wszystkie</option>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className={filterLabelClass}>
               Status
               <select name="status" defaultValue={statusFilter} className={inputClass}>
                 <option value="">Wszystkie</option>
@@ -284,7 +296,7 @@ export default async function CzasPracyPage({
                   <Th>Data</Th>
                   <Th>Budowa</Th>
                   {session.isAdmin && <Th>Pracownik</Th>}
-                  <Th>Rodzaj prac</Th>
+                  <Th>Etap prac</Th>
                   <Th>Opis</Th>
                   <Th align="right">Godziny</Th>
                   <Th>Status</Th>

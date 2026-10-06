@@ -9,7 +9,7 @@ import type { Employee, Project, TimeEntry, WorkCategory } from "@/lib/types";
 export const ROW_DIMS = {
   pracownik: "Pracownicy",
   budowa: "Budowy",
-  rodzaj: "Rodzaje prac",
+  rodzaj: "Etapy prac",
 } as const;
 
 export const COL_DIMS = {
@@ -17,7 +17,7 @@ export const COL_DIMS = {
   tydzien: "Tygodnie",
   budowa: "Budowy",
   pracownik: "Pracownicy",
-  rodzaj: "Rodzaje prac",
+  rodzaj: "Etapy prac",
 } as const;
 
 export const VALUE_KINDS = { godziny: "Godziny", koszt: "Koszt robocizny (zł)" } as const;
@@ -243,7 +243,7 @@ export async function loadReport(supabase: SupabaseClient, params: ReportParams)
     entriesQuery,
     supabase.from("employees").select("*").order("last_name").order("first_name"),
     supabase.from("projects").select("*").order("name"),
-    supabase.from("work_categories").select("id, name").order("sort_order"),
+    supabase.from("work_categories").select("*").order("sort_order").order("name"),
     params.projectId
       ? supabase.from("project_members").select("employee_id").eq("project_id", params.projectId)
       : Promise.resolve({ data: null, error: null }),
@@ -264,12 +264,12 @@ export async function loadReport(supabase: SupabaseClient, params: ReportParams)
   const labels: Record<"pracownik" | "budowa" | "rodzaj", Map<string, string>> = {
     pracownik: new Map(employees.map((e) => [e.id, reportName(e)])),
     budowa: new Map(projects.map((p) => [p.id, p.name])),
-    rodzaj: new Map([...categories.map((c) => [c.id, c.name] as const), [NO_CATEGORY, "Bez rodzaju prac"]]),
+    rodzaj: new Map([...categories.map((c) => [c.id, c.name] as const), [NO_CATEGORY, "Bez etapu"]]),
   };
 
   // Wiersze, które mają być widoczne także bez żadnego wpisu (z zerami) — tak jak na
   // liście obecności: aktywni pracownicy (przy filtrze budowy: tylko do niej przydzieleni)
-  // albo budowy w toku. Rodzaje prac pokazujemy tylko te, które wystąpiły.
+  // budowy w toku albo aktywne etapy prac.
   const baseRowKeys = new Set<string>();
   if (params.rowDim === "pracownik") {
     for (const e of employees) {
@@ -285,7 +285,23 @@ export async function loadReport(supabase: SupabaseClient, params: ReportParams)
       baseRowKeys.add(p.id);
     }
   }
+  else {
+    for (const c of categories) {
+      if (c.is_archived) continue;
+      if (params.categoryId && c.id !== params.categoryId) continue;
+      baseRowKeys.add(c.id);
+    }
+  }
   for (const entry of entries) baseRowKeys.add(entryKey(entry, params.rowDim));
+
+  // Etapy prac idą w kolejności ustawionej w zakładce Etapy prac (wpisy bez etapu na końcu),
+  // pozostałe wymiary — alfabetycznie.
+  const stageOrder = new Map(categories.map((c, i) => [c.id, i]));
+  function sortDim<T extends { key: string; label: string }>(items: T[], dim: RowDim | ColDim): T[] {
+    if (dim !== "rodzaj") return sortByLabel(items);
+    const rank = (key: string) => stageOrder.get(key) ?? Number.MAX_SAFE_INTEGER;
+    return items.sort((a, b) => rank(a.key) - rank(b.key));
+  }
 
   let columns: PivotColumn[];
   if (params.colDim === "dzien") columns = dayColumns(params.month);
@@ -293,18 +309,22 @@ export async function loadReport(supabase: SupabaseClient, params: ReportParams)
   else {
     const dim = params.colDim;
     const keys = new Set(entries.map((e) => entryKey(e, dim)));
-    columns = sortByLabel([...keys].map((key) => ({ key, label: labels[dim].get(key) ?? "—" })));
+    columns = sortDim(
+      [...keys].map((key) => ({ key, label: labels[dim].get(key) ?? "—" })),
+      dim
+    );
   }
   const columnIndex = new Map(columns.map((c, i) => [c.key, i]));
 
   const rowDim = params.rowDim;
-  const rows = sortByLabel(
+  const rows = sortDim(
     [...baseRowKeys].map<PivotRow>((key) => ({
       key,
       label: labels[rowDim].get(key) ?? "—",
       values: columns.map(() => 0),
       total: 0,
-    }))
+    })),
+    rowDim
   );
   const rowIndex = new Map(rows.map((r, i) => [r.key, i]));
 

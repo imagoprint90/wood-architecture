@@ -1,13 +1,14 @@
 import Link from "next/link";
 import { Pencil, Plus } from "lucide-react";
 import { buttonClass } from "@/components/ui/Button";
+import { DeleteButton } from "@/components/ui/DeleteButton";
 import { Badge, Card, EmptyState, PageHeader } from "@/components/ui/Card";
 import { Dash, Table, Td, Th, Tr } from "@/components/ui/Table";
+import { deleteUserAction } from "@/lib/actions/employee-actions";
 import { requireAdmin } from "@/lib/auth";
 import { employeeName, formatMoney } from "@/lib/format";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { ROLE_LABELS, type AppRole, type Employee } from "@/lib/types";
-import { DeleteUserButton } from "./DeleteUserButton";
 
 interface Account {
   email: string | null;
@@ -105,7 +106,13 @@ export default async function UzytkownicyPage() {
                           <Pencil size={14} />
                           Edytuj
                         </Link>
-                        {!isSelf && <DeleteUserButton id={employee.id} name={employeeName(employee)} />}
+                        {!isSelf && (
+                          <DeleteButton
+                            action={deleteUserAction}
+                            id={employee.id}
+                            confirmMessage={`Usunąć użytkownika „${employeeName(employee)}” razem z kontem logowania? Tego nie da się cofnąć.`}
+                          />
+                        )}
                       </div>
                     </Td>
                   </Tr>

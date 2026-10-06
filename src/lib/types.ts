@@ -43,9 +43,12 @@ export interface Project {
   notes: string | null;
 }
 
+// Etap prac (w bazie: tabela work_categories).
 export interface WorkCategory {
   id: string;
   name: string;
+  sort_order?: number;
+  is_archived?: boolean;
 }
 
 export interface TimeEntry {

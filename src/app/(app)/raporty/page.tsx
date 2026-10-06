@@ -28,7 +28,9 @@ const PRESETS: { label: string; hint: string; rowDim?: RowDim; colDim?: ColDim; 
   { label: "Ciągłość raportów", hint: "Wszystkie budowy naraz, z brakami", continuity: true },
   { label: "Budowy dziennie", hint: "Budowy i dni miesiąca", rowDim: "budowa", colDim: "dzien" },
   { label: "Pracownicy × budowy", hint: "Kto ile na której budowie", rowDim: "pracownik", colDim: "budowa" },
-  { label: "Rodzaje prac × budowy", hint: "Na co schodzi czas", rowDim: "rodzaj", colDim: "budowa" },
+  { label: "Budowy × etapy", hint: "Ile godzin poszło na każdy etap danej budowy", rowDim: "budowa", colDim: "rodzaj" },
+  { label: "Pracownicy × etapy", hint: "Kto przy jakich etapach pracował", rowDim: "pracownik", colDim: "rodzaj" },
+  { label: "Etapy dziennie", hint: "Etapy prac i dni miesiąca", rowDim: "rodzaj", colDim: "dzien" },
   { label: "Tygodniami", hint: "Pracownicy i tygodnie", rowDim: "pracownik", colDim: "tydzien" },
 ];
 
@@ -152,7 +154,7 @@ export default async function RaportyPage({
                   </select>
                 </label>
                 <label className={filterLabelClass}>
-                  Rodzaj prac
+                  Etap prac
                   <select name="rodzaj" defaultValue={params.categoryId} className={inputClass}>
                     <option value="">Wszystkie</option>
                     {report.categories.map((c) => (

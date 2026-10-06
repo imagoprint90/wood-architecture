@@ -3,11 +3,12 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import clsx from "clsx";
-import { BarChart3, Clock, HardHat, Users } from "lucide-react";
+import { BarChart3, Clock, HardHat, ListChecks, Users } from "lucide-react";
 
 const ITEMS = [
   { href: "/czas-pracy", label: "Czas pracy", icon: Clock, adminOnly: false },
   { href: "/budowy", label: "Budowy", icon: HardHat, adminOnly: true },
+  { href: "/etapy-prac", label: "Etapy prac", icon: ListChecks, adminOnly: true },
   { href: "/uzytkownicy", label: "Użytkownicy", icon: Users, adminOnly: true },
   { href: "/raporty", label: "Raporty", icon: BarChart3, adminOnly: true },
 ];

@@ -40,9 +40,12 @@ export function PivotTable({
   params: ReportParams;
   rowLabel: string;
 }) {
-  const [sort, setSort] = useState<Sort>({ key: "label", ascending: true });
+  // Bez wybranego sortowania wiersze idą w kolejności z serwera (alfabetycznie, a etapy prac
+  // w kolejności ustawionej przez administratora).
+  const [sort, setSort] = useState<Sort | null>(null);
 
   const rows = useMemo(() => {
+    if (!sort) return pivot.rows;
     const { key, ascending } = sort;
     const sorted = [...pivot.rows].sort((a, b) => {
       const byLabel = a.label.localeCompare(b.label, "pl");
@@ -56,7 +59,7 @@ export function PivotTable({
   // Pierwsze kliknięcie: nazwy A→Z, liczby od największej; kolejne odwraca kierunek.
   function toggleSort(key: SortKey) {
     setSort((current) =>
-      current.key === key ? { key, ascending: !current.ascending } : { key, ascending: key === "label" }
+      current?.key === key ? { key, ascending: !current.ascending } : { key, ascending: key === "label" }
     );
   }
 
@@ -74,8 +77,8 @@ export function PivotTable({
     className: string,
     children: ReactNode
   ) {
-    const active = sort.key === sortKey;
-    const Icon = sort.ascending ? ArrowUp : ArrowDown;
+    const active = sort?.key === sortKey;
+    const Icon = sort?.ascending ? ArrowUp : ArrowDown;
     return (
       <button
         type="button"
@@ -102,7 +105,7 @@ export function PivotTable({
   }
 
   function ariaSort(key: SortKey) {
-    if (sort.key !== key) return undefined;
+    if (sort?.key !== key) return undefined;
     return sort.ascending ? "ascending" : "descending";
   }
 

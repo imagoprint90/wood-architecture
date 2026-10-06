@@ -3,16 +3,26 @@
 import { useActionState } from "react";
 import { Trash2 } from "lucide-react";
 import { buttonClass } from "@/components/ui/Button";
-import { deleteUserAction } from "@/lib/actions/employee-actions";
+import type { ActionState } from "@/lib/types";
 
-export function DeleteUserButton({ id, name }: { id: string; name: string }) {
-  const [state, formAction, pending] = useActionState(deleteUserAction, null);
+// Przycisk „Usuń” w wierszu tabeli: pyta o potwierdzenie, a odmowę serwera (np. „są już
+// wpisy”) pokazuje pod przyciskiem.
+export function DeleteButton({
+  action,
+  id,
+  confirmMessage,
+}: {
+  action: (prev: ActionState, formData: FormData) => Promise<ActionState>;
+  id: string;
+  confirmMessage: string;
+}) {
+  const [state, formAction, pending] = useActionState(action, null);
 
   return (
     <form
       action={formAction}
       onSubmit={(event) => {
-        if (!window.confirm(`Usunąć użytkownika „${name}” razem z kontem logowania? Tego nie da się cofnąć.`)) {
+        if (!window.confirm(confirmMessage)) {
           event.preventDefault();
         }
       }}

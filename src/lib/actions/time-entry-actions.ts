@@ -10,7 +10,7 @@ import { firstIssue, isoDate, parseDecimal, textOrNull } from "./helpers";
 const entrySchema = z.object({
   project_id: z.uuid("Wybierz budowę."),
   employee_id: z.uuid("Wybierz pracownika."),
-  work_category_id: z.uuid().nullable(),
+  work_category_id: z.uuid("Wybierz etap prac."),
   work_date: isoDate,
   hours: z
     .number("Podaj liczbę godzin.")
@@ -37,7 +37,7 @@ export async function addTimeEntryAction(_prev: ActionState, formData: FormData)
   const parsed = entrySchema.safeParse({
     project_id: formData.get("project_id"),
     employee_id: employeeId,
-    work_category_id: textOrNull(formData.get("work_category_id")),
+    work_category_id: formData.get("work_category_id"),
     work_date: formData.get("work_date"),
     hours: parseDecimal(formData.get("hours")),
     description: textOrNull(formData.get("description")),
