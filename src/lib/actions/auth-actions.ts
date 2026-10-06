@@ -71,3 +71,35 @@ export async function setPasswordAction(_prev: ActionState, formData: FormData):
 
   redirect("/czas-pracy");
 }
+
+// Zmiana własnego hasła z panelu (zakładka „Moje konto”). W odróżnieniu od ustawiania hasła
+// z linku w e-mailu wymaga podania obecnego hasła — żeby ktoś, kto dosiadł się do
+// odblokowanego komputera, nie mógł przejąć konta.
+export async function changeOwnPasswordAction(
+  _prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const current = String(formData.get("current") ?? "");
+  const password = String(formData.get("password") ?? "");
+  const confirm = String(formData.get("confirm") ?? "");
+  if (!current) return { ok: false, error: "Podaj obecne hasło." };
+  if (password.length < 8) return { ok: false, error: "Nowe hasło musi mieć co najmniej 8 znaków." };
+  if (password !== confirm) return { ok: false, error: "Nowe hasła nie są identyczne." };
+  if (password === current) return { ok: false, error: "Nowe hasło musi różnić się od obecnego." };
+
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user?.email) return { ok: false, error: "Sesja wygasła. Zaloguj się ponownie." };
+
+  const { error: verifyError } = await supabase.auth.signInWithPassword({
+    email: user.email,
+    password: current,
+  });
+  if (verifyError) return { ok: false, error: "Obecne hasło jest nieprawidłowe." };
+
+  const { error } = await supabase.auth.updateUser({ password });
+  if (error) return { ok: false, error: translateAuthError(error.message) };
+  return { ok: true };
+}

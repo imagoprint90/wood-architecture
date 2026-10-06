@@ -247,3 +247,30 @@ export async function createEmployeeAccountAction(
   revalidatePath("/uzytkownicy");
   return { ok: true };
 }
+
+// Administrator ustawia nowe hasło innemu użytkownikowi (np. gdy ten je zapomniał i nie ma
+// dostępu do skrzynki). Nowe hasło przekazuje mu osobiście.
+export async function setUserPasswordAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const session = await getSession();
+  if (!session?.isAdmin) return { ok: false, error: "Hasła innych osób zmienia tylko administrator." };
+
+  const id = z.uuid().safeParse(formData.get("employee_id"));
+  if (!id.success) return { ok: false, error: "Nie znaleziono użytkownika." };
+  const password = String(formData.get("password") ?? "");
+  const confirm = String(formData.get("confirm") ?? "");
+  if (password.length < 8) return { ok: false, error: "Hasło musi mieć co najmniej 8 znaków." };
+  if (password !== confirm) return { ok: false, error: "Hasła nie są identyczne." };
+
+  const service = createSupabaseServiceClient();
+  const { data: employee, error: employeeError } = await service
+    .from("employees")
+    .select("user_id")
+    .eq("id", id.data)
+    .maybeSingle();
+  if (employeeError) return { ok: false, error: employeeError.message };
+  if (!employee?.user_id) return { ok: false, error: "Ta osoba nie ma konta do logowania." };
+
+  const { error } = await service.auth.admin.updateUserById(employee.user_id, { password });
+  if (error) return { ok: false, error: translateAuthError(error.message) };
+  return { ok: true };
+}

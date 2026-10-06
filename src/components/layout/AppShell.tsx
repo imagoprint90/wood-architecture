@@ -20,7 +20,12 @@ function UserActions() {
   return (
     <div className="flex items-center">
       <ThemeToggle />
-      <Link href="/ustaw-haslo" title="Zmień hasło" aria-label="Zmień hasło" className={iconButtonClass}>
+      <Link
+        href="/konto"
+        title="Moje konto i zmiana hasła"
+        aria-label="Moje konto i zmiana hasła"
+        className={iconButtonClass}
+      >
         <KeyRound size={16} />
       </Link>
       <form action={signOutAction}>
@@ -34,7 +39,11 @@ function UserActions() {
 
 function UserBadge({ session }: { session: SessionContext }) {
   return (
-    <div className="flex min-w-0 items-center gap-2.5">
+    <Link
+      href="/konto"
+      title="Moje konto i zmiana hasła"
+      className="-m-1 flex min-w-0 items-center gap-2.5 rounded-md p-1 transition-colors hover:bg-foreground/5"
+    >
       <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-accent/20 text-xs font-semibold text-primary">
         {initials(session.fullName)}
       </span>
@@ -42,7 +51,7 @@ function UserBadge({ session }: { session: SessionContext }) {
         <span className="block truncate font-medium">{session.fullName}</span>
         <span className="block text-xs text-muted">{ROLE_LABELS[session.role]}</span>
       </span>
-    </div>
+    </Link>
   );
 }
 

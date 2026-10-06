@@ -4,8 +4,12 @@ import { ActionForm } from "@/components/ui/ActionForm";
 import { BackLink } from "@/components/ui/BackLink";
 import { buttonClass } from "@/components/ui/Button";
 import { Card, PageHeader } from "@/components/ui/Card";
-import { FormField } from "@/components/ui/Form";
-import { createEmployeeAccountAction, updateUserAction } from "@/lib/actions/employee-actions";
+import { FormField, inputClass } from "@/components/ui/Form";
+import {
+  createEmployeeAccountAction,
+  setUserPasswordAction,
+  updateUserAction,
+} from "@/lib/actions/employee-actions";
 import { requireAdmin } from "@/lib/auth";
 import { employeeName } from "@/lib/format";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -85,6 +89,56 @@ export default async function EdycjaUzytkownikaPage({ params }: { params: Promis
             {account && <p className="text-xs text-muted sm:col-span-2">{ROLE_HINT}</p>}
           </ActionForm>
         </Card>
+
+        {account && isSelf && (
+          <Card title="Zmiana hasła">
+            <p className="text-muted">
+              To Twoje konto — hasło zmienisz w zakładce{" "}
+              <Link href="/konto" className="font-medium text-primary underline-offset-2 hover:underline">
+                Moje konto
+              </Link>
+              .
+            </p>
+          </Card>
+        )}
+
+        {account && !isSelf && (
+          <Card
+            title="Zmiana hasła"
+            description="Ustaw nowe hasło i przekaż je użytkownikowi. Dotychczasowe przestanie działać od razu."
+          >
+            <ActionForm
+              action={setUserPasswordAction}
+              submitLabel="Ustaw nowe hasło"
+              successMessage="Hasło zostało zmienione."
+              className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2"
+            >
+              <input type="hidden" name="employee_id" value={employee.id} />
+              <FormField label="Nowe hasło (min. 8 znaków)" htmlFor="new-password" required>
+                <input
+                  id="new-password"
+                  name="password"
+                  type="text"
+                  required
+                  minLength={8}
+                  autoComplete="off"
+                  className={inputClass}
+                />
+              </FormField>
+              <FormField label="Powtórz nowe hasło" htmlFor="new-password-confirm" required>
+                <input
+                  id="new-password-confirm"
+                  name="confirm"
+                  type="text"
+                  required
+                  minLength={8}
+                  autoComplete="off"
+                  className={inputClass}
+                />
+              </FormField>
+            </ActionForm>
+          </Card>
+        )}
 
         {!account && (
           <Card title="Załóż konto do logowania">
