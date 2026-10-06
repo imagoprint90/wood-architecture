@@ -17,7 +17,7 @@ export default async function NowyUzytkownikPage() {
         description="E-mail i hasło startowe przekaż użytkownikowi — hasło zmieni sam po zalogowaniu."
         back={<BackLink href="/uzytkownicy">Użytkownicy</BackLink>}
       />
-      <Card className="max-w-3xl">
+      <Card className="max-w-[60rem]">
         <ActionForm
           action={createUserAction}
           submitLabel="Dodaj użytkownika"

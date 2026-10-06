@@ -15,7 +15,7 @@ export function Th({ align = "left", children }: { align?: Align; children?: Rea
   return (
     <th
       className={clsx(
-        "border-b border-border bg-subtle px-3 py-2 text-[11px] font-semibold tracking-wider text-muted uppercase first:pl-5 last:pr-5",
+        "border-b border-border bg-subtle px-3 py-2 text-[0.6875rem] font-semibold tracking-wider text-muted uppercase first:pl-5 last:pr-5",
         align === "right" ? "text-right" : "text-left"
       )}
     >

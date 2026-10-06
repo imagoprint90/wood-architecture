@@ -83,7 +83,7 @@ export function Badge({ tone = "neutral", children }: { tone?: BadgeTone; childr
   return (
     <span
       className={clsx(
-        "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium whitespace-nowrap",
+        "inline-flex items-center rounded-full px-2 py-0.5 text-[0.6875rem] font-medium whitespace-nowrap",
         BADGE_CLASSES[tone]
       )}
     >

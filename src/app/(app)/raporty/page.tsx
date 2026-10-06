@@ -32,7 +32,7 @@ const PRESETS: { label: string; hint: string; rowDim?: RowDim; colDim?: ColDim; 
   { label: "Tygodniami", hint: "Pracownicy i tygodnie", rowDim: "pracownik", colDim: "tydzien" },
 ];
 
-const filterLabelClass = "flex flex-col gap-1 text-[11px] font-medium text-muted";
+const filterLabelClass = "flex flex-col gap-1 text-[0.6875rem] font-medium text-muted";
 
 
 export default async function RaportyPage({
@@ -238,7 +238,7 @@ function Select<T extends string>({
 function StatTile({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
     <div className="rounded-lg border border-border bg-surface px-5 py-4 shadow-xs">
-      <p className="text-[11px] font-semibold tracking-wider text-muted uppercase">{label}</p>
+      <p className="text-[0.6875rem] font-semibold tracking-wider text-muted uppercase">{label}</p>
       <p className="mt-1 text-xl font-semibold tracking-tight tabular-nums">{value}</p>
       {hint && <p className="mt-1 text-xs text-warning">{hint}</p>}
     </div>

@@ -15,7 +15,7 @@ export default async function NowaBudowaPage() {
   return (
     <>
       <PageHeader title="Nowa budowa" back={<BackLink href="/budowy">Budowy</BackLink>} />
-      <Card className="max-w-3xl">
+      <Card className="max-w-[60rem]">
         <ActionForm
           action={saveProjectAction}
           submitLabel="Dodaj budowę"

@@ -25,7 +25,7 @@ export default async function EdycjaBudowyPage({ params }: { params: Promise<{ i
   return (
     <>
       <PageHeader title={project.name} description="Edycja budowy" back={<BackLink href="/budowy">Budowy</BackLink>} />
-      <Card className="max-w-3xl">
+      <Card className="max-w-[60rem]">
         <ActionForm
           action={saveProjectAction}
           submitLabel="Zapisz zmiany"

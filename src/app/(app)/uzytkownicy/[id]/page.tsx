@@ -43,7 +43,7 @@ export default async function EdycjaUzytkownikaPage({ params }: { params: Promis
         back={<BackLink href="/uzytkownicy">Użytkownicy</BackLink>}
       />
 
-      <div className="flex max-w-3xl flex-col gap-5">
+      <div className="flex max-w-[60rem] flex-col gap-5">
         <Card title="Dane użytkownika">
           <ActionForm
             action={updateUserAction}

@@ -39,7 +39,7 @@ function UserBadge({ session }: { session: SessionContext }) {
       </span>
       <span className="min-w-0 leading-tight">
         <span className="block truncate font-medium">{session.fullName}</span>
-        <span className="block text-[11px] text-muted">{ROLE_LABELS[session.role]}</span>
+        <span className="block text-[0.6875rem] text-muted">{ROLE_LABELS[session.role]}</span>
       </span>
     </div>
   );
@@ -48,14 +48,14 @@ function UserBadge({ session }: { session: SessionContext }) {
 export function AppShell({ session, children }: { session: SessionContext; children: React.ReactNode }) {
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="app-shell min-h-screen bg-background">
       {/* Duże ekrany: stały panel boczny z logo, menu i kontem użytkownika. */}
       <aside className="fixed inset-y-0 left-0 hidden w-60 flex-col border-r border-border bg-surface lg:flex">
         <Link href="/czas-pracy" className="flex h-16 shrink-0 items-center border-b border-border px-5">
-          <Logo variant="horizontal" className="h-9 w-auto" />
+          <Logo variant="horizontal" className="h-[30px] w-auto" />
         </Link>
         <div className="flex-1 overflow-y-auto px-3 py-4">
-          <p className="mb-2 px-3 text-[11px] font-semibold tracking-wider text-muted uppercase">Menu</p>
+          <p className="mb-2 px-3 text-[0.6875rem] font-semibold tracking-wider text-muted uppercase">Menu</p>
           <AppNav isAdmin={session.isAdmin} orientation="vertical" />
         </div>
         <div className="flex flex-col gap-2 border-t border-border p-3">
@@ -70,7 +70,7 @@ export function AppShell({ session, children }: { session: SessionContext; child
       <header className="sticky top-0 z-10 border-b border-border bg-surface lg:hidden">
         <div className="flex h-14 items-center justify-between gap-3 px-4">
           <Link href="/czas-pracy" className="shrink-0">
-            <Logo variant="horizontal" className="h-8 w-auto" />
+            <Logo variant="horizontal" className="h-[30px] w-auto" />
           </Link>
           <UserActions />
         </div>
@@ -80,7 +80,7 @@ export function AppShell({ session, children }: { session: SessionContext; child
       </header>
 
       <main className="px-4 py-6 lg:pl-68 lg:pr-8">
-        <div className="mx-auto max-w-6xl">{children}</div>
+        {children}
       </main>
     </div>
   );

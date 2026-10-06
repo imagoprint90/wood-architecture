@@ -61,10 +61,26 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
-  font-size: 13px;
+  font-size: 0.8125rem;
   line-height: 1.5;
 }
 
 * {
   border-color: var(--border);
+}
+
+/* Gęsty układ po zalogowaniu na ekranach komputerowych: cała skala (tekst, odstępy, wysokości
+   pól) liczona jest w rem, więc zmiana tej jednej wartości proporcjonalnie zmniejsza lub
+   powiększa cały interfejs. 70% = tekst podstawowy ok. 9 px. Ekran logowania i telefony
+   zostają w pełnym rozmiarze. */
+@media (min-width: 64rem) {
+  :root:has(.app-shell) {
+    font-size: 70%;
+  }
+}
+
+/* Ikony skalują się razem z tekstem, przy którym stoją. */
+.app-shell .lucide {
+  width: 1.25em;
+  height: 1.25em;
 }

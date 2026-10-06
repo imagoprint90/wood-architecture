@@ -28,7 +28,7 @@ export function FormField({
 }
 
 const fieldBase =
-  "w-full rounded-md border border-border bg-surface px-3 text-[13px] text-foreground outline-none transition-colors placeholder:text-muted/70 focus:border-accent focus:ring-2 focus:ring-accent/20 disabled:opacity-60";
+  "w-full rounded-md border border-border bg-surface px-3 text-[0.8125rem] text-foreground outline-none transition-colors placeholder:text-muted/70 focus:border-accent focus:ring-2 focus:ring-accent/20 disabled:opacity-60";
 
 export const inputClass = `${fieldBase} h-9`;
 export const textareaClass = `${fieldBase} py-2`;

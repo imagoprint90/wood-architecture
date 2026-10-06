@@ -58,7 +58,7 @@ export function PivotTable({
   // Dni miesiąca to ~31 wąskich kolumn; pozostałe wymiary mają mało kolumn, za to długie nazwy.
   const narrow = params.colDim === "dzien";
   const headBase =
-    "border-b border-border bg-subtle text-[11px] font-semibold tracking-wider text-muted uppercase";
+    "border-b border-border bg-subtle text-[0.6875rem] font-semibold tracking-wider text-muted uppercase";
   const stickyFirst = "sticky left-0 z-[1] border-r border-border text-left";
   const numeric = clsx("text-right tabular-nums", narrow ? "px-1" : "px-3");
 
@@ -117,7 +117,7 @@ export function PivotTable({
                 className={clsx(headBase, narrow && "min-w-8", column.tone && TONE_HEAD[column.tone])}
               >
                 {sortButton(i, narrow ? "center" : "right", narrow ? "px-1" : "px-3", <>{column.sublabel && (
-                    <span className="block text-[10px] font-medium opacity-80">{column.sublabel}</span>
+                    <span className="block text-[0.625rem] font-medium opacity-80">{column.sublabel}</span>
                   )}
                   {column.label}</>)}
               </th>

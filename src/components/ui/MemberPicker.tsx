@@ -87,7 +87,7 @@ export function MemberPicker({
               if (open && filtered[0]) toggle(filtered[0].id);
             }
           }}
-          className="h-9 w-full rounded-md border border-border bg-surface pr-9 pl-9 text-[13px] outline-none transition-colors placeholder:text-muted/70 focus:border-accent focus:ring-2 focus:ring-accent/20"
+          className="h-9 w-full rounded-md border border-border bg-surface pr-9 pl-9 text-[0.8125rem] outline-none transition-colors placeholder:text-muted/70 focus:border-accent focus:ring-2 focus:ring-accent/20"
         />
         <button
           type="button"
