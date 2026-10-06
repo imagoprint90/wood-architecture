@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/Button";
 import { inputClass } from "@/components/ui/Form";
-import { requireManager } from "@/lib/auth";
+import { requireAdmin } from "@/lib/auth";
 import { employeeName, formatHours, formatMoney, isIsoMonth, monthRange, todayIso } from "@/lib/format";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { TimeEntry } from "@/lib/types";
@@ -33,7 +33,7 @@ export default async function RaportyPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  await requireManager();
+  await requireAdmin();
   const params = await searchParams;
   const month = isIsoMonth(params.miesiac) ? params.miesiac : todayIso().slice(0, 7);
   const { from, to } = monthRange(month);

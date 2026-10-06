@@ -10,7 +10,7 @@ export interface SessionContext {
   email: string | null;
   fullName: string;
   role: AppRole;
-  isManager: boolean;
+  isAdmin: boolean;
   // Rekord pracownika powiązany z kontem (null = konto bez przypisanego pracownika).
   employeeId: string | null;
 }
@@ -33,14 +33,14 @@ export const getSession = cache(async (): Promise<SessionContext | null> => {
     supabase.from("employees").select("id, first_name, last_name").eq("user_id", user.id).maybeSingle(),
   ]);
 
-  const role: AppRole = profile?.role ?? "pracownik";
+  const role: AppRole = profile?.role === "admin" ? "admin" : "pracownik";
   const employeeFullName = employee ? `${employee.first_name} ${employee.last_name}`.trim() : "";
   return {
     userId: user.id,
     email: user.email ?? null,
     fullName: profile?.full_name || employeeFullName || user.email || "",
     role,
-    isManager: role === "admin" || role === "kierownik",
+    isAdmin: role === "admin",
     employeeId: employee?.id ?? null,
   };
 });
@@ -51,8 +51,8 @@ export async function requireSession(): Promise<SessionContext> {
   return session;
 }
 
-export async function requireManager(): Promise<SessionContext> {
+export async function requireAdmin(): Promise<SessionContext> {
   const session = await requireSession();
-  if (!session.isManager) redirect("/czas-pracy");
+  if (!session.isAdmin) redirect("/czas-pracy");
   return session;
 }

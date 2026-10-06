@@ -6,15 +6,15 @@ import clsx from "clsx";
 import { BarChart3, Clock, HardHat, Users } from "lucide-react";
 
 const ITEMS = [
-  { href: "/czas-pracy", label: "Czas pracy", icon: Clock, managerOnly: false },
-  { href: "/budowy", label: "Budowy", icon: HardHat, managerOnly: true },
-  { href: "/pracownicy", label: "Pracownicy", icon: Users, managerOnly: true },
-  { href: "/raporty", label: "Raporty", icon: BarChart3, managerOnly: true },
+  { href: "/czas-pracy", label: "Czas pracy", icon: Clock, adminOnly: false },
+  { href: "/budowy", label: "Budowy", icon: HardHat, adminOnly: true },
+  { href: "/uzytkownicy", label: "Użytkownicy", icon: Users, adminOnly: true },
+  { href: "/raporty", label: "Raporty", icon: BarChart3, adminOnly: true },
 ];
 
-export function AppNav({ isManager }: { isManager: boolean }) {
+export function AppNav({ isAdmin }: { isAdmin: boolean }) {
   const pathname = usePathname();
-  const items = ITEMS.filter((item) => isManager || !item.managerOnly);
+  const items = ITEMS.filter((item) => isAdmin || !item.adminOnly);
 
   return (
     <nav className="flex gap-1 overflow-x-auto">
@@ -28,7 +28,7 @@ export function AppNav({ isManager }: { isManager: boolean }) {
             className={clsx(
               "flex shrink-0 items-center gap-2 border-b-2 px-3 py-2.5 text-sm font-medium transition-colors",
               active
-                ? "border-primary text-primary"
+                ? "border-accent text-primary"
                 : "border-transparent text-muted hover:text-foreground"
             )}
           >

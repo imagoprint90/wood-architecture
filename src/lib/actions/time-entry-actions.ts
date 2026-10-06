@@ -23,14 +23,14 @@ export async function addTimeEntryAction(_prev: ActionState, formData: FormData)
   const session = await getSession();
   if (!session) return { ok: false, error: "Sesja wygasła. Zaloguj się ponownie." };
 
-  // Pracownik raportuje wyłącznie za siebie; kierownik wybiera osobę z listy.
-  const employeeId = session.isManager ? formData.get("employee_id") : session.employeeId;
+  // Raportujący wpisuje wyłącznie za siebie; administrator wybiera osobę z listy.
+  const employeeId = session.isAdmin ? formData.get("employee_id") : session.employeeId;
   if (!employeeId) {
     return {
       ok: false,
-      error: session.isManager
+      error: session.isAdmin
         ? "Wybierz pracownika."
-        : "Twoje konto nie jest powiązane z pracownikiem. Zgłoś to kierownikowi.",
+        : "Twoje konto nie jest powiązane z pracownikiem. Zgłoś to administratorowi.",
     };
   }
 
@@ -47,8 +47,8 @@ export async function addTimeEntryAction(_prev: ActionState, formData: FormData)
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.from("time_entries").insert({
     ...parsed.data,
-    // Wpis wprowadzony przez kierownika nie wymaga osobnego zatwierdzenia.
-    status: session.isManager ? "zatwierdzony" : "zgloszony",
+    // Wpis wprowadzony przez administratora nie wymaga osobnego zatwierdzenia.
+    status: session.isAdmin ? "zatwierdzony" : "zgloszony",
   });
   if (error) return { ok: false, error: error.message };
 
@@ -68,7 +68,7 @@ export async function deleteTimeEntryAction(formData: FormData): Promise<void> {
 
 export async function setTimeEntryStatusAction(formData: FormData): Promise<void> {
   const session = await getSession();
-  if (!session?.isManager) return;
+  if (!session?.isAdmin) return;
   const status = z.enum(["zgloszony", "zatwierdzony", "odrzucony"]).safeParse(formData.get("status"));
   if (!status.success) return;
   const supabase = await createSupabaseServerClient();

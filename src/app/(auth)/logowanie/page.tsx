@@ -1,43 +1,58 @@
-import { ConfigMissing } from "@/components/ui/ConfigMissing";
+import Link from "next/link";
 import { ActionForm } from "@/components/ui/ActionForm";
 import { FormField, inputClass } from "@/components/ui/Form";
 import { signInAction } from "@/lib/actions/auth-actions";
-import { isSupabaseConfigured } from "@/lib/supabase/config";
 
-export default function LogowaniePage() {
-  if (!isSupabaseConfigured()) return <ConfigMissing />;
+export default async function LogowaniePage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const linkExpired = (await searchParams).blad === "link_wygasl";
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4 py-10">
-      <div className="w-full max-w-sm rounded-xl border border-border bg-surface p-6 shadow-sm">
-        <div className="mb-6 text-center">
-          <h1 className="text-lg font-semibold text-primary-dark">Wood Architecture</h1>
-          <p className="mt-1 text-sm text-muted">Zaloguj się, aby raportować czas pracy</p>
-        </div>
+    <>
+      <h1 className="text-center text-lg font-semibold">Zaloguj się</h1>
 
-        <ActionForm action={signInAction} submitLabel="Zaloguj się" className="flex flex-col gap-4">
-          <FormField label="Adres e-mail" htmlFor="email" required>
-            <input
-              id="email"
-              name="email"
-              type="email"
-              required
-              autoComplete="email"
-              className={inputClass}
-            />
-          </FormField>
-          <FormField label="Hasło" htmlFor="password" required>
-            <input
-              id="password"
-              name="password"
-              type="password"
-              required
-              autoComplete="current-password"
-              className={inputClass}
-            />
-          </FormField>
-        </ActionForm>
-      </div>
-    </div>
+      {linkExpired && (
+        <p role="alert" className="mt-4 rounded-lg border border-danger/30 bg-red-50 px-3 py-2 text-sm text-danger">
+          Link wygasł lub jest nieprawidłowy. Poproś o nowy.
+        </p>
+      )}
+
+      <ActionForm
+        action={signInAction}
+        submitLabel="Zaloguj się"
+        fullWidthSubmit
+        className="mt-5 flex flex-col gap-4"
+      >
+        <FormField label="Adres e-mail" htmlFor="email" required>
+          <input
+            id="email"
+            name="email"
+            type="email"
+            required
+            autoComplete="email"
+            className={inputClass}
+          />
+        </FormField>
+        <FormField label="Hasło" htmlFor="password" required>
+          <input
+            id="password"
+            name="password"
+            type="password"
+            required
+            autoComplete="current-password"
+            className={inputClass}
+          />
+        </FormField>
+      </ActionForm>
+
+      <p className="mt-4 text-center text-sm">
+        <Link href="/logowanie/reset-hasla" className="text-primary underline-offset-2 hover:underline">
+          Nie pamiętasz hasła?
+        </Link>
+      </p>
+    </>
   );
 }

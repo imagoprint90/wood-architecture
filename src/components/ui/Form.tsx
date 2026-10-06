@@ -48,4 +48,4 @@ export function FormField({
 }
 
 export const inputClass =
-  "w-full rounded-lg border border-border bg-white px-3 py-2.5 text-sm outline-none focus:border-primary disabled:bg-black/5";
+  "w-full rounded-lg border border-border bg-white px-3 py-2.5 text-sm outline-none focus:border-accent disabled:bg-black/5";

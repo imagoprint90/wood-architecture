@@ -1,11 +1,10 @@
-export type AppRole = "admin" | "kierownik" | "pracownik";
+export type AppRole = "admin" | "pracownik";
 export type ProjectStatus = "planowana" | "w_toku" | "wstrzymana" | "zakonczona";
 export type TimeEntryStatus = "zgloszony" | "zatwierdzony" | "odrzucony";
 
 export const ROLE_LABELS: Record<AppRole, string> = {
   admin: "Administrator",
-  kierownik: "Kierownik",
-  pracownik: "Pracownik",
+  pracownik: "Raportujący",
 };
 
 export const PROJECT_STATUS_LABELS: Record<ProjectStatus, string> = {

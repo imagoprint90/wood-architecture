@@ -1,13 +1,13 @@
 import { ActionForm } from "@/components/ui/ActionForm";
 import { FormField, inputClass } from "@/components/ui/Form";
 import { saveProjectAction } from "@/lib/actions/project-actions";
-import { requireManager } from "@/lib/auth";
+import { requireAdmin } from "@/lib/auth";
 import { formatDate } from "@/lib/format";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { PROJECT_STATUS_LABELS, type Project } from "@/lib/types";
 
 export default async function BudowyPage() {
-  await requireManager();
+  await requireAdmin();
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase.from("projects").select("*").order("name");
   if (error) throw new Error(error.message);

@@ -61,14 +61,14 @@ export default async function CzasPracyPage({
     .order("work_date", { ascending: false })
     .order("created_at", { ascending: false });
   if (projectFilter) entriesQuery = entriesQuery.eq("project_id", projectFilter);
-  if (employeeFilter && session.isManager) entriesQuery = entriesQuery.eq("employee_id", employeeFilter);
+  if (employeeFilter && session.isAdmin) entriesQuery = entriesQuery.eq("employee_id", employeeFilter);
   if (statusFilter in TIME_ENTRY_STATUS_LABELS) entriesQuery = entriesQuery.eq("status", statusFilter);
 
   const [entriesResult, projectsResult, categoriesResult, employeesResult] = await Promise.all([
     entriesQuery,
     supabase.from("projects").select("*").order("name"),
     supabase.from("work_categories").select("id, name").eq("is_archived", false).order("sort_order"),
-    session.isManager
+    session.isAdmin
       ? supabase.from("employees").select("*").order("last_name").order("first_name")
       : Promise.resolve({ data: [], error: null }),
   ]);
@@ -89,7 +89,7 @@ export default async function CzasPracyPage({
   const approvedHours = entries
     .filter((e) => e.status === "zatwierdzony")
     .reduce((sum, e) => sum + Number(e.hours), 0);
-  const canReport = session.isManager || session.employeeId !== null;
+  const canReport = session.isAdmin || session.employeeId !== null;
 
   return (
     <div className="flex flex-col gap-6">
@@ -97,13 +97,13 @@ export default async function CzasPracyPage({
         <h1 className="text-base font-semibold">Dodaj czas pracy</h1>
         {!canReport ? (
           <p className="mt-2 text-sm text-warning">
-            Twoje konto nie jest jeszcze powiązane z pracownikiem — poproś kierownika o
+            Twoje konto nie jest jeszcze powiązane z pracownikiem — poproś administratora o
             przypisanie, żeby móc raportować godziny.
           </p>
         ) : openProjects.length === 0 ? (
           <p className="mt-2 text-sm text-muted">
             Brak aktywnych budów.{" "}
-            {session.isManager ? "Dodaj budowę w zakładce Budowy." : "Zgłoś to kierownikowi."}
+            {session.isAdmin ? "Dodaj budowę w zakładce Budowy." : "Zgłoś to administratorowi."}
           </p>
         ) : (
           <ActionForm
@@ -112,7 +112,7 @@ export default async function CzasPracyPage({
             successMessage="Dodano wpis."
             className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2"
           >
-            {session.isManager && (
+            {session.isAdmin && (
               <FormField label="Pracownik" htmlFor="employee_id" required full>
                 <select
                   id="employee_id"
@@ -182,7 +182,7 @@ export default async function CzasPracyPage({
       <section className="rounded-xl border border-border bg-surface p-5">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <h2 className="text-base font-semibold">
-            {session.isManager ? "Wpisy czasu pracy" : "Moje wpisy"}
+            {session.isAdmin ? "Wpisy czasu pracy" : "Moje wpisy"}
           </h2>
           <p className="text-sm text-muted">
             Razem: <span className="font-semibold text-foreground">{formatHours(totalHours)}</span>
@@ -210,7 +210,7 @@ export default async function CzasPracyPage({
               ))}
             </select>
           </label>
-          {session.isManager && (
+          {session.isAdmin && (
             <label className="text-xs text-muted">
               Pracownik
               <select
@@ -250,7 +250,7 @@ export default async function CzasPracyPage({
         ) : (
           <ul className="mt-4 divide-y divide-border">
             {entries.map((entry) => {
-              const canDelete = session.isManager || entry.status === "zgloszony";
+              const canDelete = session.isAdmin || entry.status === "zgloszony";
               return (
                 <li key={entry.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 py-3">
                   <div className="min-w-0 flex-1 basis-56">
@@ -269,7 +269,7 @@ export default async function CzasPracyPage({
                     </div>
                     <div className="mt-0.5 text-xs text-muted">
                       {[
-                        session.isManager ? employeeName(entry.employees) : null,
+                        session.isAdmin ? employeeName(entry.employees) : null,
                         entry.work_categories?.name,
                         entry.description,
                       ]
@@ -281,7 +281,7 @@ export default async function CzasPracyPage({
                     {formatHours(Number(entry.hours))}
                   </div>
                   <div className="flex items-center gap-1">
-                    {session.isManager && entry.status !== "zatwierdzony" && (
+                    {session.isAdmin && entry.status !== "zatwierdzony" && (
                       <EntryButton
                         action={setTimeEntryStatusAction}
                         id={entry.id}
@@ -292,7 +292,7 @@ export default async function CzasPracyPage({
                         <Check size={16} />
                       </EntryButton>
                     )}
-                    {session.isManager && entry.status === "zgloszony" && (
+                    {session.isAdmin && entry.status === "zgloszony" && (
                       <EntryButton
                         action={setTimeEntryStatusAction}
                         id={entry.id}
@@ -303,7 +303,7 @@ export default async function CzasPracyPage({
                         <X size={16} />
                       </EntryButton>
                     )}
-                    {session.isManager && entry.status !== "zgloszony" && (
+                    {session.isAdmin && entry.status !== "zgloszony" && (
                       <EntryButton
                         action={setTimeEntryStatusAction}
                         id={entry.id}

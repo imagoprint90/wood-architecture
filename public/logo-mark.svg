@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Warstwa_1" xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="138 98 669 456">
+  <defs>
+    <style>
+      .st0 {
+        fill: #23464e;
+      }
+
+      .st1 {
+        fill: #49abb0;
+      }
+    </style>
+  </defs>
+  <g>
+    <path class="st1" d="M462.57,523.91v-166.78l162.88-139.59,128.6,142.28v164.09h-291.48Z"/>
+    <polygon class="st0" points="739.43 512.47 721.94 512.47 721.94 349.09 600.4 215.91 333.79 215.91 214.88 349.03 214.88 512.47 197.4 512.47 197.4 342.36 325.96 198.42 608.11 198.42 739.43 342.31 739.43 512.47"/>
+    <polygon class="st0" points="447.56 512.47 430.08 512.47 430.08 341.61 598.64 200.46 609.87 213.87 447.56 349.78 447.56 512.47"/>
+    <rect class="st0" x="142.92" y="198.42" width="659.04" height="4.03"/>
+    <rect class="st0" x="142.92" y="510.46" width="659.04" height="4.03"/>
+    <path class="st0" d="M604.26,307.36c-55.99,0-101.55-45.55-101.55-101.55s45.55-101.55,101.55-101.55,101.55,45.55,101.55,101.55-45.55,101.55-101.55,101.55ZM604.26,108.31c-53.77,0-97.51,43.74-97.51,97.51s43.74,97.51,97.51,97.51,97.51-43.74,97.51-97.51-43.74-97.51-97.51-97.51Z"/>
+    <path class="st0" d="M206.14,548.12c-19.65,0-35.64-15.99-35.64-35.64s15.99-35.64,35.64-35.64,35.64,15.99,35.64,35.64-15.99,35.64-35.64,35.64ZM206.14,480.87c-17.43,0-31.61,14.18-31.61,31.61s14.18,31.61,31.61,31.61,31.61-14.18,31.61-31.61-14.18-31.61-31.61-31.61Z"/>
+    <rect class="st0" x="243.8" y="486.92" width="2.69" height="20.17"/>
+    <rect class="st0" x="251.87" y="496.33" width="2.69" height="10.76"/>
+    <rect class="st0" x="259.94" y="496.33" width="2.69" height="10.76"/>
+    <rect class="st0" x="268.01" y="496.33" width="2.69" height="10.76"/>
+    <rect class="st0" x="276.08" y="486.92" width="2.69" height="20.17"/>
+    <rect class="st0" x="284.15" y="496.33" width="2.69" height="10.76"/>
+    <rect class="st0" x="292.22" y="496.33" width="2.69" height="10.76"/>
+    <rect class="st0" x="300.29" y="496.33" width="2.69" height="10.76"/>
+    <rect class="st0" x="308.36" y="486.92" width="2.69" height="20.17"/>
+    <rect class="st0" x="316.43" y="496.33" width="2.69" height="10.76"/>
+    <rect class="st0" x="324.5" y="496.33" width="2.69" height="10.76"/>
+    <rect class="st0" x="332.57" y="496.33" width="2.69" height="10.76"/>
+    <rect class="st0" x="340.64" y="486.92" width="2.69" height="20.17"/>
+    <rect class="st0" x="348.71" y="496.33" width="2.69" height="10.76"/>
+    <rect class="st0" x="356.78" y="496.33" width="2.69" height="10.76"/>
+    <rect class="st0" x="364.85" y="496.33" width="2.69" height="10.76"/>
+    <rect class="st0" x="372.92" y="486.92" width="2.69" height="20.17"/>
+    <g>
+      <rect class="st0" x="710.51" y="207.16" width="2.69" height="22.86"/>
+      <rect class="st0" x="718.58" y="207.16" width="2.69" height="12.1"/>
+      <rect class="st0" x="726.65" y="207.16" width="2.69" height="12.1"/>
+      <rect class="st0" x="734.72" y="207.16" width="2.69" height="12.1"/>
+      <rect class="st0" x="742.79" y="207.16" width="2.69" height="22.86"/>
+      <rect class="st0" x="750.86" y="207.16" width="2.69" height="12.1"/>
+      <rect class="st0" x="758.93" y="207.16" width="2.69" height="12.1"/>
+      <rect class="st0" x="767" y="207.16" width="2.69" height="12.1"/>
+      <rect class="st0" x="775.07" y="207.16" width="2.69" height="22.86"/>
+      <rect class="st0" x="783.14" y="207.16" width="2.69" height="12.1"/>
+      <rect class="st0" x="791.21" y="207.16" width="2.69" height="12.1"/>
+      <rect class="st0" x="799.28" y="207.16" width="2.69" height="12.1"/>
+    </g>
+    <rect class="st0" x="142.92" y="341.65" width="659.04" height="4.03"/>
+  </g>
+</svg>

@@ -1,14 +1,16 @@
 @import "tailwindcss";
 
 :root {
-  /* Ciepła, „drewniana” paleta: brąz jako kolor główny, jasne, lekko kremowe tło. */
-  --background: #f7f5f1;
+  /* Kolory z logotypu: ciemny morski #23464e (główny) i turkus #49abb0 (akcent). Reszta
+     palety (tło, obramowania, tekst pomocniczy) to stonowane odcienie tych samych barw. */
+  --background: #f3f7f7;
   --surface: #ffffff;
-  --foreground: #23201b;
-  --muted: #6f685c;
-  --border: #e3ddd2;
-  --primary: #9a5b1e;
-  --primary-dark: #6f3f12;
+  --foreground: #1b2b2f;
+  --muted: #5d7074;
+  --border: #d9e3e4;
+  --primary: #23464e;
+  --primary-dark: #18333a;
+  --accent: #49abb0;
   --danger: #dc2626;
   --success: #15803d;
   --warning: #c2410c;
@@ -22,6 +24,7 @@
   --color-border: var(--border);
   --color-primary: var(--primary);
   --color-primary-dark: var(--primary-dark);
+  --color-accent: var(--accent);
   --color-danger: var(--danger);
   --color-success: var(--success);
   --color-warning: var(--warning);

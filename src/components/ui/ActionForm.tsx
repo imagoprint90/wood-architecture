@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, type ReactNode } from "react";
+import clsx from "clsx";
 import { Button } from "@/components/ui/Button";
 import type { ActionState } from "@/lib/types";
 
@@ -10,12 +11,15 @@ export function ActionForm({
   action,
   submitLabel,
   successMessage = "Zapisano.",
+  fullWidthSubmit = false,
   className,
   children,
 }: {
   action: (prev: ActionState, formData: FormData) => Promise<ActionState>;
   submitLabel: string;
   successMessage?: string;
+  // Przycisk na całą szerokość, komunikat pod nim — układ dla wąskich kart (logowanie).
+  fullWidthSubmit?: boolean;
   className?: string;
   children: ReactNode;
 }) {
@@ -24,9 +28,14 @@ export function ActionForm({
   return (
     <form action={formAction} className={className}>
       {children}
-      <div className="flex flex-wrap items-center gap-3 sm:col-span-2">
-        <Button type="submit" disabled={pending}>
-          {pending ? "Zapisywanie…" : submitLabel}
+      <div
+        className={clsx(
+          "flex gap-3 sm:col-span-2",
+          fullWidthSubmit ? "flex-col" : "flex-wrap items-center"
+        )}
+      >
+        <Button type="submit" disabled={pending} className={fullWidthSubmit ? "w-full" : undefined}>
+          {pending ? "Proszę czekać…" : submitLabel}
         </Button>
         {state?.ok === false && (
           <p role="alert" className="text-sm text-danger">

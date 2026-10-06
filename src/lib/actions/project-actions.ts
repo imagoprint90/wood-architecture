@@ -19,7 +19,7 @@ const projectSchema = z.object({
 
 export async function saveProjectAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const session = await getSession();
-  if (!session?.isManager) return { ok: false, error: "Brak uprawnień." };
+  if (!session?.isAdmin) return { ok: false, error: "Brak uprawnień." };
 
   const parsed = projectSchema.safeParse({
     name: formData.get("name") ?? "",
