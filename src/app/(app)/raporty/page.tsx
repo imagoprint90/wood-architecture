@@ -12,6 +12,7 @@ import {
   ROW_DIMS,
   STATUS_FILTERS,
   VALUE_KINDS,
+  isYearly,
   loadReport,
   monthLabel,
   parseReportParams,
@@ -33,6 +34,7 @@ const PRESETS: { label: string; hint: string; rowDim?: RowDim; colDim?: ColDim; 
   { label: "Pracownicy × etapy", hint: "Kto przy jakich etapach pracował", rowDim: "pracownik", colDim: "rodzaj" },
   { label: "Etapy dziennie", hint: "Etapy prac i dni miesiąca", rowDim: "rodzaj", colDim: "dzien" },
   { label: "Tygodniami", hint: "Pracownicy i tygodnie", rowDim: "pracownik", colDim: "tydzien" },
+  { label: "Raport roczny", hint: "Pracownicy i wszystkie miesiące roku", rowDim: "pracownik", colDim: "miesiac" },
 ];
 
 const filterLabelClass = "flex flex-col gap-1 text-xs font-medium text-muted";
@@ -48,6 +50,9 @@ export default async function RaportyPage({
   const supabase = await createSupabaseServerClient();
   const report = await loadReport(supabase, params);
   const { pivot, totals } = report;
+  // W raporcie rocznym strzałki u góry przełączają lata, w pozostałych — miesiące.
+  const yearly = isYearly(params);
+  const periodStep = yearly ? 12 : 1;
   // Ile filtrów zawęża lub zmienia dane (układ wierszy i kolumn to nie filtr) — widoczne
   // także przy zwiniętym panelu.
   // Godziny niezatwierdzone wśród pokazanych wpisów (odrzucone w ogóle nie trafiają do raportu).
@@ -63,25 +68,25 @@ export default async function RaportyPage({
     <>
       <PageHeader
         title="Raporty"
-        description="Godziny i koszty robocizny w wybranym miesiącu — w układzie, który wybierzesz."
+        description={`Godziny i koszty robocizny ${yearly ? "w wybranym roku" : "w wybranym miesiącu"} — w układzie, który wybierzesz.`}
         actions={
           <>
             <div className="flex items-center rounded-md border border-border bg-surface shadow-xs">
               <Link
-                href={`/raporty?${reportQuery(params, { month: shiftMonth(params.month, -1) })}`}
-                title="Poprzedni miesiąc"
-                aria-label="Poprzedni miesiąc"
+                href={`/raporty?${reportQuery(params, { month: shiftMonth(params.month, -periodStep) })}`}
+                title={yearly ? "Poprzedni rok" : "Poprzedni miesiąc"}
+                aria-label={yearly ? "Poprzedni rok" : "Poprzedni miesiąc"}
                 className="rounded-l-md p-2 text-muted hover:bg-subtle hover:text-foreground"
               >
                 <ChevronLeft size={16} />
               </Link>
               <span className="min-w-36 border-x border-border px-3 text-center font-medium">
-                {monthLabel(params.month)}
+                {yearly ? `Rok ${params.month.slice(0, 4)}` : monthLabel(params.month)}
               </span>
               <Link
-                href={`/raporty?${reportQuery(params, { month: shiftMonth(params.month, 1) })}`}
-                title="Następny miesiąc"
-                aria-label="Następny miesiąc"
+                href={`/raporty?${reportQuery(params, { month: shiftMonth(params.month, periodStep) })}`}
+                title={yearly ? "Następny rok" : "Następny miesiąc"}
+                aria-label={yearly ? "Następny rok" : "Następny miesiąc"}
                 className="rounded-r-md p-2 text-muted hover:bg-subtle hover:text-foreground"
               >
                 <ChevronRight size={16} />
@@ -241,6 +246,12 @@ export default async function RaportyPage({
               </span>
             )}
             <span>Najedź na komórkę z godzinami, żeby zobaczyć szczegóły wpisów.</span>
+            {report.missingRate && (
+              <span>
+                „brak stawki” lub * w kolumnie Suma PLN = pracownik nie ma ustawionej stawki godzinowej
+                (zakładka Użytkownicy); takie godziny liczone są jako 0 zł.
+              </span>
+            )}
           </div>
 
           {pivot.rows.length === 0 ? (

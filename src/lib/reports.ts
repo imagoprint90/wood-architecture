@@ -15,6 +15,7 @@ export const ROW_DIMS = {
 export const COL_DIMS = {
   dzien: "Dni miesiąca",
   tydzien: "Tygodnie",
+  miesiac: "Miesiące (cały rok)",
   budowa: "Budowy",
   pracownik: "Pracownicy",
   rodzaj: "Etapy prac",
@@ -59,7 +60,12 @@ export interface PivotRow {
   key: string;
   label: string;
   values: number[];
-  total: number;
+  // Sumy wiersza liczone zawsze w obu jednostkach, niezależnie od tego, co pokazują komórki.
+  totalHours: number;
+  // Koszt robocizny: godziny × stawka zapamiętana przy wpisie.
+  totalCost: number;
+  // Czy w wierszu są wpisy bez żadnej stawki (ich koszt liczony jest jako 0 zł).
+  missingRate: boolean;
   // Dla każdej kolumny: indeksy wpisów (w Pivot.details), z których powstała komórka.
   entries: number[][];
   // Dla każdej kolumny: czy komórka zawiera choć jeden wpis czekający na zatwierdzenie.
@@ -91,7 +97,8 @@ export interface Pivot {
   rows: PivotRow[];
   details: EntryDetail[];
   columnTotals: number[];
-  grandTotal: number;
+  grandHours: number;
+  grandCost: number;
 }
 
 export interface Report {
@@ -226,6 +233,27 @@ function weekColumns(month: string): PivotColumn[] {
   });
 }
 
+const MONTH_SHORT = ["Sty", "Lut", "Mar", "Kwi", "Maj", "Cze", "Lip", "Sie", "Wrz", "Paź", "Lis", "Gru"];
+
+function monthColumns(year: string): PivotColumn[] {
+  return MONTH_SHORT.map((label, index) => {
+    const key = `${year}-${String(index + 1).padStart(2, "0")}`;
+    // `title` = pełna nazwa do dymka i podpowiedzi nad nagłówkiem.
+    return { key, label, title: monthLabel(key) };
+  });
+}
+
+// Raport roczny = kolumny to miesiące; wtedy zakres danych to cały rok, nie jeden miesiąc.
+export function isYearly(params: Pick<ReportParams, "colDim">): boolean {
+  return params.colDim === "miesiac";
+}
+
+export function reportRange(params: Pick<ReportParams, "colDim" | "month">): { from: string; to: string } {
+  if (!isYearly(params)) return monthRange(params.month);
+  const year = params.month.slice(0, 4);
+  return { from: `${year}-01-01`, to: `${year}-12-31` };
+}
+
 function entryKey(entry: TimeEntry, dim: RowDim | ColDim): string {
   switch (dim) {
     case "pracownik":
@@ -238,6 +266,8 @@ function entryKey(entry: TimeEntry, dim: RowDim | ColDim): string {
       return entry.work_date;
     case "tydzien":
       return weekStart(entry.work_date);
+    case "miesiac":
+      return entry.work_date.slice(0, 7);
   }
 }
 
@@ -246,7 +276,7 @@ function sortByLabel<T extends { label: string }>(items: T[]): T[] {
 }
 
 export async function loadReport(supabase: SupabaseClient, params: ReportParams): Promise<Report> {
-  const { from, to } = monthRange(params.month);
+  const { from, to } = reportRange(params);
 
   let entriesQuery = supabase
     .from("time_entries")
@@ -333,6 +363,7 @@ export async function loadReport(supabase: SupabaseClient, params: ReportParams)
   let columns: PivotColumn[];
   if (params.colDim === "dzien") columns = dayColumns(params.month);
   else if (params.colDim === "tydzien") columns = weekColumns(params.month);
+  else if (params.colDim === "miesiac") columns = monthColumns(params.month.slice(0, 4));
   else {
     const dim = params.colDim;
     const keys = new Set(entries.map((e) => entryKey(e, dim)));
@@ -349,7 +380,9 @@ export async function loadReport(supabase: SupabaseClient, params: ReportParams)
       key,
       label: labels[rowDim].get(key) ?? "—",
       values: columns.map(() => 0),
-      total: 0,
+      totalHours: 0,
+      totalCost: 0,
+      missingRate: false,
       entries: columns.map(() => []),
       pending: columns.map(() => false),
     })),
@@ -359,21 +392,27 @@ export async function loadReport(supabase: SupabaseClient, params: ReportParams)
 
   const totals = { hours: 0, approvedHours: 0, cost: 0, entries: entries.length };
   let missingRate = false;
+  const currentRates = new Map(employees.map((e) => [e.id, e.hourly_rate]));
   const details: EntryDetail[] = [];
   // Wpisy w kolejności dat — w tej kolejności pokażą się w dymku nad komórką.
   entries.sort((a, b) => a.work_date.localeCompare(b.work_date));
   for (const entry of entries) {
     const hours = Number(entry.hours);
-    const cost = hours * Number(entry.hourly_rate_snapshot ?? 0);
+    // Stawka zapamiętana przy wpisie; jeśli jej nie było (pracownik nie miał wtedy ustawionej
+    // stawki) — obecna stawka pracownika. Dopiero brak obu oznacza koszt 0 zł.
+    const rate = entry.hourly_rate_snapshot ?? currentRates.get(entry.employee_id) ?? null;
+    const cost = hours * Number(rate ?? 0);
     totals.hours += hours;
     totals.cost += cost;
     if (entry.status === "zatwierdzony") totals.approvedHours += hours;
-    if (entry.hourly_rate_snapshot === null) missingRate = true;
+    if (rate === null) missingRate = true;
 
     const row = rows[rowIndex.get(entryKey(entry, rowDim))!];
     const column = columnIndex.get(entryKey(entry, params.colDim));
     const amount = params.value === "koszt" ? cost : hours;
-    row.total += amount;
+    row.totalHours += hours;
+    row.totalCost += cost;
+    if (rate === null) row.missingRate = true;
     if (column === undefined) continue;
     row.values[column] += amount;
     row.entries[column].push(details.length);
@@ -409,11 +448,12 @@ export async function loadReport(supabase: SupabaseClient, params: ReportParams)
   }
 
   const columnTotals = columns.map((_, i) => rows.reduce((sum, r) => sum + r.values[i], 0));
-  const grandTotal = rows.reduce((sum, r) => sum + r.total, 0);
+  const grandHours = rows.reduce((sum, r) => sum + r.totalHours, 0);
+  const grandCost = rows.reduce((sum, r) => sum + r.totalCost, 0);
 
   return {
     params,
-    pivot: { columns, rows, details, columnTotals, grandTotal },
+    pivot: { columns, rows, details, columnTotals, grandHours, grandCost },
     totals,
     missingRate,
     employees,

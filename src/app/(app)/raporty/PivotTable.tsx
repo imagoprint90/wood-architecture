@@ -9,6 +9,11 @@ function formatValue(value: number, kind: ReportParams["value"]): string {
   return value.toLocaleString("pl-PL", { maximumFractionDigits: kind === "koszt" ? 0 : 2 });
 }
 
+// Kwota w złotych z groszami, bez symbolu waluty (jest w nagłówku kolumny).
+function formatMoney(amount: number): string {
+  return amount.toLocaleString("pl-PL", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
 function formatHours(hours: number): string {
   return `${hours.toLocaleString("pl-PL", { maximumFractionDigits: 2 })} h`;
 }
@@ -20,7 +25,7 @@ const TONE_CELL = { saturday: "bg-accent/20", holiday: "bg-danger/15" };
 const TOOLTIP_LIMIT = 6;
 
 // Po czym sortowane są wiersze: nazwa, suma, kolumny ciągłości albo konkretna kolumna (indeks).
-type SortKey = "label" | "total" | "reported" | "missing" | number;
+type SortKey = "label" | "hours" | "cost" | "reported" | "missing" | number;
 interface Sort {
   key: SortKey;
   ascending: boolean;
@@ -34,7 +39,8 @@ interface Hovered {
 }
 
 function sortValue(row: PivotRow, key: Exclude<SortKey, "label">): number {
-  if (key === "total") return row.total;
+  if (key === "hours") return row.totalHours;
+  if (key === "cost") return row.totalCost;
   if (key === "reported") return row.reportedDays ?? 0;
   if (key === "missing") return row.missingDays ?? 0;
   return row.values[key];
@@ -182,8 +188,15 @@ export function PivotTable({
                 </th>
               </>
             )}
-            <th aria-sort={ariaSort("total")} className={clsx(headBase, "border-l border-border")}>
-              {sortButton("total", "right", "pr-5 pl-3", "Suma")}
+            <th aria-sort={ariaSort("hours")} className={clsx(headBase, "border-l border-border")}>
+              {sortButton("hours", "right", "px-3", "Suma godzin")}
+            </th>
+            <th
+              aria-sort={ariaSort("cost")}
+              title="Godziny × stawka godzinowa zapamiętana przy każdym wpisie"
+              className={headBase}
+            >
+              {sortButton("cost", "right", "pr-5 pl-3", "Suma PLN")}
             </th>
           </tr>
         </thead>
@@ -259,11 +272,31 @@ export function PivotTable({
                 <td
                   title={rowPending ? "Suma zawiera godziny czekające na zatwierdzenie" : undefined}
                   className={clsx(
-                    "border-b border-l border-border py-2 pr-5 pl-3 text-right font-semibold tabular-nums",
+                    "border-b border-l border-border px-3 py-2 text-right font-semibold tabular-nums",
                     rowPending && "text-warning"
                   )}
                 >
-                  {formatValue(row.total, params.value)}
+                  {formatValue(row.totalHours, "godziny")}
+                </td>
+                <td
+                  title={
+                    row.missingRate
+                      ? "Część godzin nie ma stawki godzinowej i jest policzona jako 0 zł. Ustaw stawkę w zakładce Użytkownicy."
+                      : undefined
+                  }
+                  className={clsx(
+                    "border-b border-border py-2 pr-5 pl-3 text-right font-semibold tabular-nums",
+                    row.totalCost === 0 && "font-normal text-muted/40"
+                  )}
+                >
+                  {row.missingRate && row.totalCost === 0 ? (
+                    <span className="font-normal text-muted">brak stawki</span>
+                  ) : (
+                    <>
+                      {formatMoney(row.totalCost)}
+                      {row.missingRate && <span className="text-muted">*</span>}
+                    </>
+                  )}
                 </td>
               </tr>
             );
@@ -286,10 +319,10 @@ export function PivotTable({
               </td>
             ))}
             {params.continuity && <td colSpan={2} className="border-l border-border bg-subtle" />}
-            <td className="border-l border-border bg-subtle py-2.5 pr-5 pl-3 text-right tabular-nums">
-              {formatValue(pivot.grandTotal, params.value)}
-              {params.value === "koszt" ? " zł" : " h"}
+            <td className="border-l border-border bg-subtle px-3 py-2.5 text-right tabular-nums">
+              {formatValue(pivot.grandHours, "godziny")} h
             </td>
+            <td className="bg-subtle py-2.5 pr-5 pl-3 text-right tabular-nums">{formatMoney(pivot.grandCost)} zł</td>
           </tr>
         </tfoot>
       </table>
@@ -312,6 +345,7 @@ function columnTitle(column: PivotColumn, params: ReportParams): string {
     const [year, month, day] = column.key.split("-");
     return `${day}.${month}.${year}${column.title ? ` (${column.title})` : ""}`;
   }
+  if (params.colDim === "miesiac") return column.title ?? column.label;
   return column.sublabel ? `${column.label} (${column.sublabel})` : column.label;
 }
 

@@ -28,21 +28,26 @@ export async function GET(request: Request) {
     [
       ROW_DIMS[params.rowDim],
       // Dni jako pełne daty; tygodnie z zakresem dat; pozostałe wymiary po nazwie.
-      ...pivot.columns.map((c) => (dayColumns ? c.key : c.sublabel ? `${c.label} (${c.sublabel})` : c.label)),
+      ...pivot.columns.map((c) =>
+        dayColumns || params.colDim === "miesiac" ? c.key : c.sublabel ? `${c.label} (${c.sublabel})` : c.label
+      ),
       ...extraHead,
-      "Suma",
+      "Suma godzin",
+      "Suma PLN",
     ],
     ...pivot.rows.map((row) => [
       row.label,
       ...row.values,
       ...(params.continuity ? [row.reportedDays ?? 0, row.missingDays ?? 0] : []),
-      row.total,
+      row.totalHours,
+      row.totalCost,
     ]),
-    ["Razem", ...pivot.columnTotals, ...extraHead.map(() => ""), pivot.grandTotal],
+    ["Razem", ...pivot.columnTotals, ...extraHead.map(() => ""), pivot.grandHours, pivot.grandCost],
   ];
 
   const csv = "﻿" + lines.map((line) => line.map(cell).join(";")).join("\r\n") + "\r\n";
-  const name = `raport-${params.continuity ? "ciaglosc" : `${params.rowDim}-${params.colDim}`}-${params.month}.csv`;
+  const period = params.colDim === "miesiac" ? params.month.slice(0, 4) : params.month;
+  const name = `raport-${params.continuity ? "ciaglosc" : `${params.rowDim}-${params.colDim}`}-${period}.csv`;
   return new Response(csv, {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
