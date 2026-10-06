@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { KeyRound, LogOut } from "lucide-react";
 import { AppNav } from "@/components/layout/AppNav";
+import { Footer } from "@/components/layout/Footer";
 import { Logo } from "@/components/layout/Logo";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
 import { signOutAction } from "@/lib/actions/auth-actions";
@@ -48,7 +49,7 @@ function UserBadge({ session }: { session: SessionContext }) {
 export function AppShell({ session, children }: { session: SessionContext; children: React.ReactNode }) {
 
   return (
-    <div className="app-shell min-h-screen bg-background">
+    <div className="app-shell flex min-h-screen flex-col bg-background">
       {/* Duże ekrany: stały panel boczny z logo, menu i kontem użytkownika. */}
       <aside className="fixed inset-y-0 left-0 hidden w-60 flex-col border-r border-border bg-surface lg:flex">
         <Link href="/czas-pracy" className="flex h-16 shrink-0 items-center border-b border-border px-5">
@@ -79,9 +80,10 @@ export function AppShell({ session, children }: { session: SessionContext; child
         </div>
       </header>
 
-      <main className="px-4 py-6 lg:pl-68 lg:pr-8">
+      <main className="flex-1 px-4 py-6 lg:pr-8 lg:pl-68">
         {children}
       </main>
+      <Footer className="border-t border-border px-4 py-3 lg:pr-8 lg:pl-68" />
     </div>
   );
 }
