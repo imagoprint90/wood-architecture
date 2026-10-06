@@ -5,6 +5,11 @@ import clsx from "clsx";
 import { ArrowDown, ArrowUp } from "lucide-react";
 import type { Pivot, PivotRow, ReportParams } from "@/lib/reports";
 
+// Komórka bez żadnego wpisu pokazuje myślnik zamiast zera — wtedy od razu widać, gdzie są dane.
+function formatCell(value: number, kind: ReportParams["value"]): string {
+  return value === 0 ? "–" : formatValue(value, kind);
+}
+
 function formatValue(value: number, kind: ReportParams["value"]): string {
   return value.toLocaleString("pl-PL", { maximumFractionDigits: kind === "koszt" ? 0 : 2 });
 }
@@ -163,7 +168,7 @@ export function PivotTable({
                       value === 0 && !missing && "text-muted/40"
                     )}
                   >
-                    {formatValue(value, params.value)}
+                    {formatCell(value, params.value)}
                   </td>
                 );
               })}
@@ -200,7 +205,7 @@ export function PivotTable({
                   value === 0 && "text-muted/40"
                 )}
               >
-                {formatValue(value, params.value)}
+                {formatCell(value, params.value)}
               </td>
             ))}
             {params.continuity && <td colSpan={2} className="border-l border-border bg-subtle" />}
