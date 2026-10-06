@@ -30,6 +30,8 @@ export interface Employee {
   position: string | null;
   hourly_rate: number | null;
   is_active: boolean;
+  // Ile dni roboczych wstecz wolno raportować (brak = wartość domyślna).
+  report_days_back?: number;
 }
 
 export interface Project {

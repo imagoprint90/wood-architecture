@@ -7,6 +7,7 @@ import { getSession } from "@/lib/auth";
 import { createSupabaseServerClient, createSupabaseServiceClient } from "@/lib/supabase/server";
 import { translateAuthError } from "@/lib/supabase/auth-errors";
 import type { ActionState, AppRole } from "@/lib/types";
+import { DEFAULT_REPORT_DAYS_BACK } from "@/lib/workdays";
 import { firstIssue, parseDecimal, textOrNull } from "./helpers";
 
 // Użytkownik = rekord w `employees` (dane osoby, stawka) + konto logowania z rolą w
@@ -19,6 +20,11 @@ const personSchema = z.object({
   position: z.string().nullable(),
   hourly_rate: z.number("Nieprawidłowa stawka.").min(0, "Stawka nie może być ujemna.").nullable(),
   is_active: z.boolean(),
+  report_days_back: z
+    .number("Liczba dni wstecz musi być liczbą całkowitą.")
+    .int("Liczba dni wstecz musi być liczbą całkowitą.")
+    .min(0, "Liczba dni wstecz nie może być ujemna.")
+    .max(365, "Liczba dni wstecz może wynosić najwyżej 365."),
 });
 
 const credentialsSchema = z.object({
@@ -35,6 +41,8 @@ function readPerson(formData: FormData, isActive: boolean) {
     position: textOrNull(formData.get("position")),
     hourly_rate: parseDecimal(formData.get("hourly_rate")),
     is_active: isActive,
+    // Puste pole = wartość domyślna (raport do końca następnego dnia roboczego).
+    report_days_back: Number(String(formData.get("report_days_back") ?? "").trim() || DEFAULT_REPORT_DAYS_BACK),
   });
 }
 

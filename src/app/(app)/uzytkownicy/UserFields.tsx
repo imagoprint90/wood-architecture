@@ -1,5 +1,6 @@
 import { FormField, inputClass } from "@/components/ui/Form";
 import { ROLE_LABELS, type AppRole, type Employee } from "@/lib/types";
+import { DEFAULT_REPORT_DAYS_BACK } from "@/lib/workdays";
 
 export const ROLE_HINT =
   "Administrator ma dostęp do wszystkiego. Raportujący widzi i dodaje wyłącznie własne raporty czasu pracy.";
@@ -35,6 +36,23 @@ export function PersonFields({ employee }: { employee?: Employee }) {
           defaultValue={employee?.hourly_rate ?? ""}
           className={inputClass}
         />
+      </FormField>
+      <FormField label="Raportowanie wstecz (dni robocze)" htmlFor="report_days_back" required>
+        <input
+          id="report_days_back"
+          name="report_days_back"
+          type="number"
+          min={0}
+          max={365}
+          step={1}
+          required
+          defaultValue={employee?.report_days_back ?? DEFAULT_REPORT_DAYS_BACK}
+          className={inputClass}
+        />
+        <p className="mt-1 text-xs text-muted">
+          Ile dni roboczych wstecz ta osoba może złożyć raport. 1 = do końca następnego dnia roboczego,
+          0 = tylko za bieżący dzień. Nie dotyczy administratora.
+        </p>
       </FormField>
     </>
   );

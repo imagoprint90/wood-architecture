@@ -11,6 +11,7 @@ import { requireAdmin } from "@/lib/auth";
 import { employeeName, formatMoney } from "@/lib/format";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { ROLE_LABELS, type AppRole, type Employee } from "@/lib/types";
+import { DEFAULT_REPORT_DAYS_BACK } from "@/lib/workdays";
 
 interface Account {
   email: string | null;
@@ -60,6 +61,7 @@ export default async function UzytkownicyPage() {
               { label: "Stanowisko" },
               { label: "Telefon", className: "tabular-nums" },
               { label: "Stawka", align: "right" },
+              { label: "Dni wstecz", align: "right" },
               { label: "Status" },
               { label: "Akcje", align: "right", sortable: false },
             ]}
@@ -76,6 +78,7 @@ export default async function UzytkownicyPage() {
                   employee.position,
                   employee.phone,
                   employee.hourly_rate === null ? null : Number(employee.hourly_rate),
+                  employee.report_days_back ?? DEFAULT_REPORT_DAYS_BACK,
                   employee.is_active ? "Aktywny" : "Nieaktywny",
                   null,
                 ],
@@ -93,6 +96,7 @@ export default async function UzytkownicyPage() {
                   employee.position ?? <Dash />,
                   employee.phone ?? <Dash />,
                   employee.hourly_rate !== null ? `${formatMoney(Number(employee.hourly_rate))}/h` : <Dash />,
+                  employee.report_days_back ?? DEFAULT_REPORT_DAYS_BACK,
                   <Badge tone={employee.is_active ? "success" : "neutral"}>
                     {employee.is_active ? "Aktywny" : "Nieaktywny"}
                   </Badge>,

@@ -5,9 +5,10 @@ import { redirect } from "next/navigation";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { getSession } from "@/lib/auth";
-import { formatDate, formatHours } from "@/lib/format";
+import { formatDate, formatHours, todayIso } from "@/lib/format";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { ActionState } from "@/lib/types";
+import { DEFAULT_REPORT_DAYS_BACK, daysBackLabel, earliestReportDate } from "@/lib/workdays";
 import { firstIssue, isoDate, textOrNull } from "./helpers";
 
 const MAX_HOURS_PER_DAY = 24;
@@ -45,7 +46,7 @@ function readEntry(formData: FormData, employeeId: FormDataEntryValue | null) {
 }
 
 // Reguły wspólne dla dodawania i edycji; zwraca komunikat błędu albo null.
-//  - jeden raport na dzień na danej budowie (odrzucone się nie liczą),
+//  - jeden raport na dzień na danej budowie i etapie (odrzucone się nie liczą),
 //  - łącznie nie więcej niż 24 h jednego dnia na wszystkich budowach.
 // `ignoreId` — edytowany wpis, którego nie porównujemy z samym sobą.
 async function checkDayRules(
@@ -56,7 +57,7 @@ async function checkDayRules(
 ): Promise<string | null> {
   const { data, error } = await supabase
     .from("time_entries")
-    .select("id, project_id, hours, projects(name), work_categories(name)")
+    .select("id, project_id, work_category_id, hours, projects(name), work_categories(name)")
     .eq("employee_id", entry.employee_id)
     .eq("work_date", entry.work_date)
     .neq("status", "odrzucony");
@@ -66,19 +67,22 @@ async function checkDayRules(
   const day = formatDate(entry.work_date);
   const who = ownReport ? "Masz już" : "Ten pracownik ma już";
 
-  const duplicate = sameDay.find((row) => row.project_id === entry.project_id);
+  const duplicate = sameDay.find(
+    (row) => row.project_id === entry.project_id && row.work_category_id === entry.work_category_id
+  );
   if (duplicate) {
-    const project = (duplicate.projects as unknown as { name: string } | null)?.name ?? "tej budowie";
-    const stage = (duplicate.work_categories as unknown as { name: string } | null)?.name;
-    const details = [formatHours(Number(duplicate.hours)), stage].filter(Boolean).join(", ");
-    return `${who} raport z dnia ${day} na budowie „${project}” (${details}). Na jedną budowę można złożyć tylko jeden raport dziennie${
-      ownReport ? " — jeśli wymaga poprawy, zgłoś to administratorowi." : " — popraw istniejący raport."
+    const project = (duplicate.projects as unknown as { name: string } | null)?.name ?? "—";
+    const stage = (duplicate.work_categories as unknown as { name: string } | null)?.name ?? "—";
+    return `${who} raport z dnia ${day} na budowie „${project}” dla etapu „${stage}” (${formatHours(
+      Number(duplicate.hours)
+    )}). Ten sam etap na tej samej budowie można zaraportować tylko raz dziennie${
+      ownReport ? " — jeśli godziny wymagają poprawy, zgłoś to administratorowi." : " — popraw istniejący raport."
     }`;
   }
 
   const otherHours = sameDay.reduce((sum, row) => sum + Number(row.hours), 0);
   if (otherHours + entry.hours > MAX_HOURS_PER_DAY) {
-    return `${who} ${formatHours(otherHours)} zaraportowane w dniu ${day} na innych budowach. Razem z tym raportem byłoby ${formatHours(
+    return `${who} ${formatHours(otherHours)} zaraportowane w dniu ${day}. Razem z tym raportem byłoby ${formatHours(
       otherHours + entry.hours
     )}, a doba ma 24 godziny.`;
   }
@@ -88,7 +92,7 @@ async function checkDayRules(
 // Naruszenie unikalności w bazie (dwa zapisy w tej samej chwili) — ten sam komunikat co wyżej.
 function databaseError(error: { code?: string; message: string }): string {
   return error.code === "23505"
-    ? "Raport na tę budowę z tego dnia już istnieje. Na jedną budowę można złożyć tylko jeden raport dziennie."
+    ? "Raport dla tego etapu na tej budowie z tego dnia już istnieje. Ten sam etap na tej samej budowie można zaraportować tylko raz dziennie."
     : error.message;
 }
 
@@ -121,6 +125,28 @@ export async function addTimeEntryAction(_prev: ActionState, formData: FormData)
       .maybeSingle();
     if (!membershipError && !membership) {
       return { ok: false, error: "Nie jesteś przydzielony do tej budowy. Zgłoś to administratorowi." };
+    }
+
+    // Okno raportowania: ile dni roboczych wstecz wolno temu pracownikowi raportować.
+    // Błąd odczytu (np. brak migracji 0006) = wartość domyślna.
+    const { data: settings } = await supabase
+      .from("employees")
+      .select("report_days_back")
+      .eq("id", parsed.data.employee_id)
+      .maybeSingle();
+    const daysBack = settings?.report_days_back ?? DEFAULT_REPORT_DAYS_BACK;
+    const today = todayIso();
+    const earliest = earliestReportDate(today, daysBack);
+    if (parsed.data.work_date > today) {
+      return { ok: false, error: "Nie można raportować czasu pracy z przyszłą datą." };
+    }
+    if (parsed.data.work_date < earliest) {
+      return {
+        ok: false,
+        error: `Termin na raport z dnia ${formatDate(parsed.data.work_date)} już minął. Możesz raportować najwcześniej za ${formatDate(
+          earliest
+        )} (${daysBackLabel(daysBack)}). Jeśli raport jest potrzebny, zgłoś to administratorowi.`,
+      };
     }
   }
 

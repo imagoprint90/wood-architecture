@@ -26,6 +26,7 @@ import {
   todayIso,
 } from "@/lib/format";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { DEFAULT_REPORT_DAYS_BACK, daysBackLabel, earliestReportDate } from "@/lib/workdays";
 import {
   TIME_ENTRY_STATUS_LABELS,
   type Employee,
@@ -102,6 +103,18 @@ export default async function CzasPracyPage({
       .select("project_id")
       .eq("employee_id", session.employeeId);
     if (memberships) assignedIds = new Set(memberships.map((m) => m.project_id as string));
+  }
+  // Okno raportowania raportującego: najwcześniejsza dozwolona data (administrator bez limitu).
+  let earliestDate: string | null = null;
+  let daysBack = DEFAULT_REPORT_DAYS_BACK;
+  if (!session.isAdmin && session.employeeId) {
+    const { data: settings } = await supabase
+      .from("employees")
+      .select("report_days_back")
+      .eq("id", session.employeeId)
+      .maybeSingle();
+    daysBack = settings?.report_days_back ?? DEFAULT_REPORT_DAYS_BACK;
+    earliestDate = earliestReportDate(today, daysBack);
   }
   const openProjects = projects.filter(
     (p) => (p.status === "w_toku" || p.status === "planowana") && (!assignedIds || assignedIds.has(p.id))
@@ -190,10 +203,18 @@ export default async function CzasPracyPage({
                   name="work_date"
                   type="date"
                   required
+                  min={earliestDate ?? undefined}
                   max={today}
                   defaultValue={today}
                   className={inputClass}
                 />
+                {earliestDate && (
+                  <p className="mt-1 text-xs text-muted">
+                    {earliestDate === today
+                      ? "Możesz raportować tylko za dzisiejszy dzień."
+                      : `Najwcześniej za ${formatDate(earliestDate)} (${daysBackLabel(daysBack)}).`}
+                  </p>
+                )}
               </FormField>
               <FormField label="Liczba godzin" htmlFor="hours" required>
                 <HoursInput id="hours" name="hours" required />
