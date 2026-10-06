@@ -6,8 +6,8 @@ import { requestPasswordResetAction } from "@/lib/actions/auth-actions";
 export default function ResetHaslaPage() {
   return (
     <>
-      <h1 className="text-center text-lg font-semibold">Przypomnienie hasła</h1>
-      <p className="mt-1 text-center text-sm text-muted">
+      <h1 className="text-center text-base font-semibold">Przypomnienie hasła</h1>
+      <p className="mt-1 text-center text-muted">
         Podaj adres e-mail swojego konta — wyślemy link do ustawienia nowego hasła.
       </p>
 
@@ -30,7 +30,7 @@ export default function ResetHaslaPage() {
         </FormField>
       </ActionForm>
 
-      <p className="mt-4 text-center text-sm">
+      <p className="mt-4 text-center">
         <Link href="/logowanie" className="text-primary underline-offset-2 hover:underline">
           Wróć do logowania
         </Link>

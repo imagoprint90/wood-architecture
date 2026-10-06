@@ -10,7 +10,7 @@ export default async function UstawHasloPage() {
 
   return (
     <>
-      <h1 className="text-center text-lg font-semibold">Ustaw nowe hasło</h1>
+      <h1 className="text-center text-base font-semibold">Ustaw nowe hasło</h1>
 
       <ActionForm
         action={setPasswordAction}
@@ -42,7 +42,7 @@ export default async function UstawHasloPage() {
         </FormField>
       </ActionForm>
 
-      <p className="mt-4 text-center text-sm">
+      <p className="mt-4 text-center">
         <Link href="/czas-pracy" className="text-primary underline-offset-2 hover:underline">
           Anuluj
         </Link>

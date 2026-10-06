@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { Trash2 } from "lucide-react";
+import { buttonClass } from "@/components/ui/Button";
 import { deleteUserAction } from "@/lib/actions/employee-actions";
 
 export function DeleteUserButton({ id, name }: { id: string; name: string }) {
@@ -20,13 +21,13 @@ export function DeleteUserButton({ id, name }: { id: string; name: string }) {
       <button
         type="submit"
         disabled={pending}
-        className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm text-danger hover:bg-red-50 disabled:opacity-50"
+        className={buttonClass("ghost", "sm", "text-danger hover:bg-danger/10")}
       >
-        <Trash2 size={15} />
+        <Trash2 size={14} />
         {pending ? "Usuwanie…" : "Usuń"}
       </button>
       {state?.ok === false && (
-        <p role="alert" className="mt-1 max-w-xs whitespace-normal text-left text-xs text-danger">
+        <p role="alert" className="mt-1 w-64 text-left text-xs whitespace-normal text-danger">
           {state.error}
         </p>
       )}

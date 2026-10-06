@@ -83,3 +83,12 @@ export function RoleSelect({ id, defaultValue }: { id: string; defaultValue: App
     </select>
   );
 }
+
+// Nagłówek grupy pól w formularzu, z linią oddzielającą od poprzedniej grupy.
+export function FieldGroupTitle({ children }: { children: React.ReactNode }) {
+  return (
+    <h3 className="border-t border-border pt-4 text-[11px] font-semibold tracking-wider text-muted uppercase sm:col-span-2">
+      {children}
+    </h3>
+  );
+}

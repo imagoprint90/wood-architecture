@@ -10,34 +10,32 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const VARIANT_CLASSES: Record<Variant, string> = {
-  primary: "bg-primary text-white shadow-sm hover:bg-primary-dark hover:shadow active:translate-y-px",
-  secondary:
-    "bg-white text-foreground border border-border shadow-sm hover:border-accent/60 hover:bg-accent/10 active:translate-y-px",
-  danger: "bg-danger text-white shadow-sm hover:bg-red-700 hover:shadow active:translate-y-px",
-  ghost: "bg-transparent text-foreground hover:bg-black/5 active:translate-y-px",
+  primary: "bg-primary text-on-primary shadow-xs hover:bg-primary-hover",
+  secondary: "border border-border bg-surface text-foreground shadow-xs hover:bg-subtle",
+  danger: "bg-danger text-white shadow-xs hover:opacity-90",
+  ghost: "text-foreground hover:bg-foreground/5",
 };
 
 const SIZE_CLASSES: Record<Size, string> = {
-  sm: "px-3 py-1.5 text-sm",
-  md: "px-4 py-2.5 text-sm",
+  sm: "h-8 px-2.5 text-xs",
+  md: "h-9 px-3.5 text-[13px]",
 };
+
+// Klasy przycisku do użycia także na <Link>, który ma wyglądać jak przycisk.
+export function buttonClass(variant: Variant = "primary", size: Size = "md", className?: string) {
+  return clsx(
+    "inline-flex shrink-0 items-center justify-center gap-1.5 rounded-md font-medium whitespace-nowrap transition-colors",
+    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50",
+    "disabled:cursor-not-allowed disabled:opacity-50",
+    VARIANT_CLASSES[variant],
+    SIZE_CLASSES[size],
+    className
+  );
+}
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant = "primary", size = "md", ...props }, ref) => {
-    return (
-      <button
-        ref={ref}
-        className={clsx(
-          "inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-all duration-150",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60 focus-visible:ring-offset-1",
-          "disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none disabled:active:translate-y-0",
-          VARIANT_CLASSES[variant],
-          SIZE_CLASSES[size],
-          className
-        )}
-        {...props}
-      />
-    );
+    return <button ref={ref} className={buttonClass(variant, size, className)} {...props} />;
   }
 );
 Button.displayName = "Button";

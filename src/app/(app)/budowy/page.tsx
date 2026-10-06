@@ -1,11 +1,19 @@
-import { ChevronRight } from "lucide-react";
-import { ActionForm } from "@/components/ui/ActionForm";
-import { FormField, inputClass } from "@/components/ui/Form";
-import { saveProjectAction } from "@/lib/actions/project-actions";
+import Link from "next/link";
+import { Pencil, Plus } from "lucide-react";
+import { buttonClass } from "@/components/ui/Button";
+import { Badge, Card, EmptyState, PageHeader } from "@/components/ui/Card";
+import { Dash, Table, Td, Th, Tr } from "@/components/ui/Table";
 import { requireAdmin } from "@/lib/auth";
 import { formatDate } from "@/lib/format";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { PROJECT_STATUS_LABELS, type Project } from "@/lib/types";
+
+const STATUS_TONES = {
+  planowana: "accent",
+  w_toku: "success",
+  wstrzymana: "warning",
+  zakonczona: "neutral",
+} as const;
 
 export default async function BudowyPage() {
   await requireAdmin();
@@ -15,124 +23,61 @@ export default async function BudowyPage() {
   const projects = (data ?? []) as Project[];
 
   return (
-    <div className="flex flex-col gap-6">
-      <section className="rounded-xl border border-border bg-surface p-5">
-        <h1 className="text-base font-semibold">Nowa budowa</h1>
-        <ProjectForm />
-      </section>
+    <>
+      <PageHeader
+        title="Budowy"
+        description="Lista budów, na które raportowany jest czas pracy."
+        actions={
+          <Link href="/budowy/nowy" className={buttonClass()}>
+            <Plus size={15} />
+            Dodaj budowę
+          </Link>
+        }
+      />
 
-      <section className="rounded-xl border border-border bg-surface p-5">
-        <h2 className="text-base font-semibold">Budowy ({projects.length})</h2>
+      <Card flush>
         {projects.length === 0 ? (
-          <p className="mt-3 text-sm text-muted">Nie dodano jeszcze żadnej budowy.</p>
+          <EmptyState>Nie dodano jeszcze żadnej budowy.</EmptyState>
         ) : (
-          <ul className="mt-3 divide-y divide-border">
-            {projects.map((project) => (
-              <li key={project.id} className="py-3">
-                <details className="group">
-                  <summary className="flex cursor-pointer list-none flex-wrap items-center gap-x-3 gap-y-1 rounded-lg px-2 py-1.5 text-sm hover:bg-black/5 [&::-webkit-details-marker]:hidden">
-                      <ChevronRight size={16} className="shrink-0 text-muted transition-transform group-open:rotate-90" />
-                    <span className="font-medium">{project.name}</span>
-                    <span className="rounded-full bg-black/5 px-2 py-0.5 text-xs">
-                      {PROJECT_STATUS_LABELS[project.status]}
-                    </span>
-                    <span className="text-xs text-muted">
-                      {[
-                        project.address,
-                        project.client_name,
-                        project.start_date ? `od ${formatDate(project.start_date)}` : null,
-                      ]
-                        .filter(Boolean)
-                        .join(" · ")}
-                    </span>
-                  </summary>
-                  <ProjectForm project={project} />
-                </details>
-              </li>
-            ))}
-          </ul>
+          <Table>
+            <thead>
+              <tr>
+                <Th>Nazwa</Th>
+                <Th>Status</Th>
+                <Th>Adres</Th>
+                <Th>Inwestor / klient</Th>
+                <Th>Rozpoczęcie</Th>
+                <Th>Zakończenie</Th>
+                <Th align="right">Akcje</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {projects.map((project) => (
+                <Tr key={project.id}>
+                  <Td className="font-medium">{project.name}</Td>
+                  <Td>
+                    <Badge tone={STATUS_TONES[project.status]}>{PROJECT_STATUS_LABELS[project.status]}</Badge>
+                  </Td>
+                  <Td>{project.address ?? <Dash />}</Td>
+                  <Td>{project.client_name ?? <Dash />}</Td>
+                  <Td className="tabular-nums">
+                    {project.start_date ? formatDate(project.start_date) : <Dash />}
+                  </Td>
+                  <Td className="tabular-nums">
+                    {project.end_date ? formatDate(project.end_date) : <Dash />}
+                  </Td>
+                  <Td align="right">
+                    <Link href={`/budowy/${project.id}`} className={buttonClass("ghost", "sm", "text-primary")}>
+                      <Pencil size={14} />
+                      Edytuj
+                    </Link>
+                  </Td>
+                </Tr>
+              ))}
+            </tbody>
+          </Table>
         )}
-      </section>
-    </div>
-  );
-}
-
-function ProjectForm({ project }: { project?: Project }) {
-  // Sufiks odróżnia identyfikatory pól, gdy na stronie jest kilka formularzy naraz.
-  const suffix = project?.id ?? "new";
-  return (
-    <ActionForm
-      action={saveProjectAction}
-      submitLabel={project ? "Zapisz zmiany" : "Dodaj budowę"}
-      className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2"
-    >
-      {project && <input type="hidden" name="id" value={project.id} />}
-      <FormField label="Nazwa budowy" htmlFor={`name-${suffix}`} required>
-        <input
-          id={`name-${suffix}`}
-          name="name"
-          required
-          defaultValue={project?.name}
-          className={inputClass}
-        />
-      </FormField>
-      <FormField label="Status" htmlFor={`status-${suffix}`} required>
-        <select
-          id={`status-${suffix}`}
-          name="status"
-          defaultValue={project?.status ?? "w_toku"}
-          className={inputClass}
-        >
-          {Object.entries(PROJECT_STATUS_LABELS).map(([value, label]) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
-          ))}
-        </select>
-      </FormField>
-      <FormField label="Adres" htmlFor={`address-${suffix}`}>
-        <input
-          id={`address-${suffix}`}
-          name="address"
-          defaultValue={project?.address ?? ""}
-          className={inputClass}
-        />
-      </FormField>
-      <FormField label="Inwestor / klient" htmlFor={`client-${suffix}`}>
-        <input
-          id={`client-${suffix}`}
-          name="client_name"
-          defaultValue={project?.client_name ?? ""}
-          className={inputClass}
-        />
-      </FormField>
-      <FormField label="Data rozpoczęcia" htmlFor={`start-${suffix}`}>
-        <input
-          id={`start-${suffix}`}
-          name="start_date"
-          type="date"
-          defaultValue={project?.start_date ?? ""}
-          className={inputClass}
-        />
-      </FormField>
-      <FormField label="Data zakończenia" htmlFor={`end-${suffix}`}>
-        <input
-          id={`end-${suffix}`}
-          name="end_date"
-          type="date"
-          defaultValue={project?.end_date ?? ""}
-          className={inputClass}
-        />
-      </FormField>
-      <FormField label="Uwagi" htmlFor={`notes-${suffix}`} full>
-        <textarea
-          id={`notes-${suffix}`}
-          name="notes"
-          rows={2}
-          defaultValue={project?.notes ?? ""}
-          className={inputClass}
-        />
-      </FormField>
-    </ActionForm>
+      </Card>
+    </>
   );
 }

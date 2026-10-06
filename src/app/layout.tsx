@@ -19,7 +19,15 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="pl" className={`${inter.variable} h-full`}>
+    <html lang="pl" className={`${inter.variable} h-full`} suppressHydrationWarning>
+      <head>
+        {/* Ustawia motyw przed pierwszym malowaniem strony (zapisany wybór albo ustawienie systemu). */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try{var t=localStorage.getItem("theme");if(t==="dark"||(t!=="light"&&window.matchMedia("(prefers-color-scheme: dark)").matches)){document.documentElement.classList.add("dark")}}catch(e){}`,
+          }}
+        />
+      </head>
       <body className="min-h-full antialiased">{children}</body>
     </html>
   );

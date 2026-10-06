@@ -1,29 +1,55 @@
 @import "tailwindcss";
 
+/* Tryb ciemny przełączany klasą "dark" na <html> (patrz ThemeToggle i skrypt w layout.tsx). */
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
+  color-scheme: light;
   /* Kolory z logotypu: ciemny morski #23464e (główny) i turkus #49abb0 (akcent). Reszta
-     palety (tło, obramowania, tekst pomocniczy) to stonowane odcienie tych samych barw. */
-  --background: #f3f7f7;
+     palety to stonowane odcienie tych samych barw. */
+  --background: #f4f7f8;
   --surface: #ffffff;
-  --foreground: #1b2b2f;
-  --muted: #5d7074;
-  --border: #d9e3e4;
+  --subtle: #f3f6f7;
+  --foreground: #16262a;
+  --muted: #607479;
+  --border: #e0e7e9;
   --primary: #23464e;
-  --primary-dark: #18333a;
+  --primary-hover: #18333a;
+  --on-primary: #ffffff;
   --accent: #49abb0;
-  --danger: #dc2626;
-  --success: #15803d;
-  --warning: #c2410c;
+  --danger: #c63434;
+  --success: #17794a;
+  --warning: #b3560a;
+}
+
+:root.dark {
+  color-scheme: dark;
+  --background: #0c1416;
+  --surface: #131d20;
+  --subtle: #18262a;
+  --foreground: #e6eef0;
+  --muted: #8da2a7;
+  --border: #23343a;
+  /* Ciemny morski nie odcina się od ciemnego tła, więc rolę koloru głównego przejmuje turkus. */
+  --primary: #49abb0;
+  --primary-hover: #62bfc4;
+  --on-primary: #0c1416;
+  --accent: #49abb0;
+  --danger: #f37b7b;
+  --success: #4fd08a;
+  --warning: #f2a94e;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-surface: var(--surface);
+  --color-subtle: var(--subtle);
   --color-foreground: var(--foreground);
   --color-muted: var(--muted);
   --color-border: var(--border);
   --color-primary: var(--primary);
-  --color-primary-dark: var(--primary-dark);
+  --color-primary-hover: var(--primary-hover);
+  --color-on-primary: var(--on-primary);
   --color-accent: var(--accent);
   --color-danger: var(--danger);
   --color-success: var(--success);
@@ -35,6 +61,8 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+  font-size: 13px;
+  line-height: 1.5;
 }
 
 * {

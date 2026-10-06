@@ -1,5 +1,7 @@
 import { Button } from "@/components/ui/Button";
+import { Card, EmptyState, PageHeader } from "@/components/ui/Card";
 import { inputClass } from "@/components/ui/Form";
+import { Table, Td, Th, Tr } from "@/components/ui/Table";
 import { requireAdmin } from "@/lib/auth";
 import { employeeName, formatHours, formatMoney, isIsoMonth, monthRange, todayIso } from "@/lib/format";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -26,6 +28,17 @@ function summarize(entries: TimeEntry[], keyOf: (e: TimeEntry) => string, labelO
     rows.set(key, row);
   }
   return [...rows.values()].sort((a, b) => a.label.localeCompare(b.label, "pl"));
+}
+
+function sumRows(rows: SummaryRow[]) {
+  return rows.reduce(
+    (sum, r) => ({
+      hours: sum.hours + r.hours,
+      approvedHours: sum.approvedHours + r.approvedHours,
+      cost: sum.cost + r.cost,
+    }),
+    { hours: 0, approvedHours: 0, cost: 0 }
+  );
 }
 
 export default async function RaportyPage({
@@ -58,29 +71,54 @@ export default async function RaportyPage({
     (e) => e.employee_id,
     (e) => employeeName(e.employees)
   );
+  const total = sumRows(byProject);
   const missingRate = entries.some((e) => e.hourly_rate_snapshot === null);
 
   return (
-    <div className="flex flex-col gap-6">
-      <section className="rounded-xl border border-border bg-surface p-5">
-        <h1 className="text-base font-semibold">Raport miesięczny</h1>
-        <form method="get" className="mt-3 flex flex-wrap items-end gap-3">
-          <label className="text-xs text-muted">
-            Miesiąc
-            <input type="month" name="miesiac" defaultValue={month} className={`${inputClass} mt-1`} />
-          </label>
-          <Button type="submit" variant="secondary">
-            Pokaż
-          </Button>
-        </form>
-        <p className="mt-3 text-xs text-muted">
-          Uwzględnia wpisy zgłoszone i zatwierdzone (bez odrzuconych).
-          {missingRate && " Część wpisów nie ma stawki godzinowej — ich koszt liczony jest jako 0 zł."}
-        </p>
-      </section>
+    <>
+      <PageHeader
+        title="Raport miesięczny"
+        description="Wpisy zgłoszone i zatwierdzone, bez odrzuconych."
+        actions={
+          <form method="get" className="flex items-center gap-2">
+            <input
+              type="month"
+              name="miesiac"
+              aria-label="Miesiąc"
+              defaultValue={month}
+              className={`${inputClass} w-40`}
+            />
+            <Button type="submit" variant="secondary">
+              Pokaż
+            </Button>
+          </form>
+        }
+      />
 
-      <SummaryTable title="Według budów" firstColumn="Budowa" rows={byProject} />
-      <SummaryTable title="Według pracowników" firstColumn="Pracownik" rows={byEmployee} />
+      <div className="flex flex-col gap-5">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <StatTile label="Godziny razem" value={formatHours(total.hours)} />
+          <StatTile label="W tym zatwierdzone" value={formatHours(total.approvedHours)} />
+          <StatTile
+            label="Koszt robocizny"
+            value={formatMoney(total.cost)}
+            hint={missingRate ? "Część wpisów nie ma stawki — liczone jako 0 zł." : undefined}
+          />
+        </div>
+
+        <SummaryTable title="Według budów" firstColumn="Budowa" rows={byProject} />
+        <SummaryTable title="Według pracowników" firstColumn="Pracownik" rows={byEmployee} />
+      </div>
+    </>
+  );
+}
+
+function StatTile({ label, value, hint }: { label: string; value: string; hint?: string }) {
+  return (
+    <div className="rounded-lg border border-border bg-surface px-5 py-4 shadow-xs">
+      <p className="text-[11px] font-semibold tracking-wider text-muted uppercase">{label}</p>
+      <p className="mt-1 text-xl font-semibold tracking-tight tabular-nums">{value}</p>
+      {hint && <p className="mt-1 text-xs text-warning">{hint}</p>}
     </div>
   );
 }
@@ -94,50 +132,42 @@ function SummaryTable({
   firstColumn: string;
   rows: SummaryRow[];
 }) {
-  const total = rows.reduce(
-    (sum, r) => ({
-      hours: sum.hours + r.hours,
-      approvedHours: sum.approvedHours + r.approvedHours,
-      cost: sum.cost + r.cost,
-    }),
-    { hours: 0, approvedHours: 0, cost: 0 }
-  );
+  const total = sumRows(rows);
 
   return (
-    <section className="rounded-xl border border-border bg-surface p-5">
-      <h2 className="text-base font-semibold">{title}</h2>
+    <Card title={title} flush>
       {rows.length === 0 ? (
-        <p className="mt-3 text-sm text-muted">Brak wpisów w wybranym miesiącu.</p>
+        <EmptyState>Brak wpisów w wybranym miesiącu.</EmptyState>
       ) : (
-        <div className="mt-3 overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border text-left text-xs text-muted">
-                <th className="py-2 pr-4 font-medium">{firstColumn}</th>
-                <th className="py-2 pr-4 text-right font-medium">Godziny</th>
-                <th className="py-2 pr-4 text-right font-medium">W tym zatwierdzone</th>
-                <th className="py-2 text-right font-medium">Koszt robocizny</th>
-              </tr>
-            </thead>
-            <tbody className="tabular-nums">
-              {rows.map((row, index) => (
-                <tr key={index} className="border-b border-border">
-                  <td className="py-2 pr-4">{row.label}</td>
-                  <td className="py-2 pr-4 text-right">{formatHours(row.hours)}</td>
-                  <td className="py-2 pr-4 text-right">{formatHours(row.approvedHours)}</td>
-                  <td className="py-2 text-right">{formatMoney(row.cost)}</td>
-                </tr>
-              ))}
-              <tr className="font-semibold">
-                <td className="py-2 pr-4">Razem</td>
-                <td className="py-2 pr-4 text-right">{formatHours(total.hours)}</td>
-                <td className="py-2 pr-4 text-right">{formatHours(total.approvedHours)}</td>
-                <td className="py-2 text-right">{formatMoney(total.cost)}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+        <Table>
+          <thead>
+            <tr>
+              <Th>{firstColumn}</Th>
+              <Th align="right">Godziny</Th>
+              <Th align="right">W tym zatwierdzone</Th>
+              <Th align="right">Koszt robocizny</Th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row, index) => (
+              <Tr key={index}>
+                <Td className="font-medium">{row.label}</Td>
+                <Td align="right">{formatHours(row.hours)}</Td>
+                <Td align="right">{formatHours(row.approvedHours)}</Td>
+                <Td align="right">{formatMoney(row.cost)}</Td>
+              </Tr>
+            ))}
+          </tbody>
+          <tfoot>
+            <tr className="border-t border-border bg-subtle font-semibold">
+              <Td>Razem</Td>
+              <Td align="right">{formatHours(total.hours)}</Td>
+              <Td align="right">{formatHours(total.approvedHours)}</Td>
+              <Td align="right">{formatMoney(total.cost)}</Td>
+            </tr>
+          </tfoot>
+        </Table>
       )}
-    </section>
+    </Card>
   );
 }

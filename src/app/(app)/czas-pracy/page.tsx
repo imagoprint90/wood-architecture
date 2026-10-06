@@ -2,7 +2,9 @@ import clsx from "clsx";
 import { Check, Trash2, Undo2, X } from "lucide-react";
 import { ActionForm } from "@/components/ui/ActionForm";
 import { Button } from "@/components/ui/Button";
-import { FormField, inputClass } from "@/components/ui/Form";
+import { Badge, Card, EmptyState, PageHeader } from "@/components/ui/Card";
+import { FormField, inputClass, textareaClass } from "@/components/ui/Form";
+import { Dash, Table, Td, Th, Tr } from "@/components/ui/Table";
 import {
   addTimeEntryAction,
   deleteTimeEntryAction,
@@ -27,11 +29,13 @@ import {
   type WorkCategory,
 } from "@/lib/types";
 
-const STATUS_CLASSES: Record<TimeEntryStatus, string> = {
-  zgloszony: "bg-amber-100 text-amber-800",
-  zatwierdzony: "bg-green-100 text-green-800",
-  odrzucony: "bg-red-100 text-red-700",
-};
+const STATUS_TONES = {
+  zgloszony: "warning",
+  zatwierdzony: "success",
+  odrzucony: "danger",
+} as const;
+
+const filterLabelClass = "flex flex-col gap-1 text-[11px] font-medium text-muted";
 
 function single(value: string | string[] | undefined): string {
   return typeof value === "string" ? value : "";
@@ -84,254 +88,275 @@ export default async function CzasPracyPage({
   const openProjects = projects.filter((p) => p.status === "w_toku" || p.status === "planowana");
   const activeEmployees = employees.filter((e) => e.is_active);
 
-  const countedEntries = entries.filter((e) => e.status !== "odrzucony");
-  const totalHours = countedEntries.reduce((sum, e) => sum + Number(e.hours), 0);
+  const totalHours = entries
+    .filter((e) => e.status !== "odrzucony")
+    .reduce((sum, e) => sum + Number(e.hours), 0);
   const approvedHours = entries
     .filter((e) => e.status === "zatwierdzony")
     .reduce((sum, e) => sum + Number(e.hours), 0);
   const canReport = session.isAdmin || session.employeeId !== null;
 
   return (
-    <div className="flex flex-col gap-6">
-      <section className="rounded-xl border border-border bg-surface p-5">
-        <h1 className="text-base font-semibold">Dodaj czas pracy</h1>
-        {!canReport ? (
-          <p className="mt-2 text-sm text-warning">
-            Twoje konto nie jest jeszcze powiązane z pracownikiem — poproś administratora o
-            przypisanie, żeby móc raportować godziny.
-          </p>
-        ) : openProjects.length === 0 ? (
-          <p className="mt-2 text-sm text-muted">
-            Brak aktywnych budów.{" "}
-            {session.isAdmin ? "Dodaj budowę w zakładce Budowy." : "Zgłoś to administratorowi."}
-          </p>
-        ) : (
-          <ActionForm
-            action={addTimeEntryAction}
-            submitLabel="Dodaj wpis"
-            successMessage="Dodano wpis."
-            className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2"
-          >
-            {session.isAdmin && (
-              <FormField label="Pracownik" htmlFor="employee_id" required full>
-                <select
-                  id="employee_id"
-                  name="employee_id"
-                  required
-                  defaultValue={session.employeeId ?? ""}
-                  className={inputClass}
-                >
+    <>
+      <PageHeader
+        title="Czas pracy"
+        description={
+          session.isAdmin
+            ? "Wpisy wszystkich użytkowników — dodawanie, zatwierdzanie i odrzucanie."
+            : "Twoje raporty czasu pracy na budowach."
+        }
+      />
+
+      <div className="flex flex-col gap-5">
+        <Card title="Nowy wpis">
+          {!canReport ? (
+            <p className="text-warning">
+              Twoje konto nie jest jeszcze powiązane z pracownikiem — poproś administratora o
+              przypisanie, żeby móc raportować godziny.
+            </p>
+          ) : openProjects.length === 0 ? (
+            <p className="text-muted">
+              Brak aktywnych budów.{" "}
+              {session.isAdmin ? "Dodaj budowę w zakładce Budowy." : "Zgłoś to administratorowi."}
+            </p>
+          ) : (
+            <ActionForm
+              action={addTimeEntryAction}
+              submitLabel="Dodaj wpis"
+              successMessage="Dodano wpis."
+              className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2 lg:grid-cols-4"
+            >
+              {session.isAdmin && (
+                <FormField label="Pracownik" htmlFor="employee_id" required>
+                  <select
+                    id="employee_id"
+                    name="employee_id"
+                    required
+                    defaultValue={session.employeeId ?? ""}
+                    className={inputClass}
+                  >
+                    <option value="">— wybierz —</option>
+                    {activeEmployees.map((e) => (
+                      <option key={e.id} value={e.id}>
+                        {employeeName(e)}
+                      </option>
+                    ))}
+                  </select>
+                </FormField>
+              )}
+              <FormField label="Budowa" htmlFor="project_id" required>
+                <select id="project_id" name="project_id" required defaultValue="" className={inputClass}>
                   <option value="">— wybierz —</option>
-                  {activeEmployees.map((e) => (
-                    <option key={e.id} value={e.id}>
-                      {employeeName(e)}
+                  {openProjects.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
                     </option>
                   ))}
                 </select>
               </FormField>
-            )}
-            <FormField label="Budowa" htmlFor="project_id" required>
-              <select id="project_id" name="project_id" required defaultValue="" className={inputClass}>
-                <option value="">— wybierz —</option>
-                {openProjects.map((p) => (
+              <FormField label="Rodzaj prac" htmlFor="work_category_id">
+                <select id="work_category_id" name="work_category_id" defaultValue="" className={inputClass}>
+                  <option value="">— nie wybrano —</option>
+                  {categories.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </FormField>
+              <FormField label="Data" htmlFor="work_date" required>
+                <input
+                  id="work_date"
+                  name="work_date"
+                  type="date"
+                  required
+                  max={today}
+                  defaultValue={today}
+                  className={inputClass}
+                />
+              </FormField>
+              <FormField label="Liczba godzin" htmlFor="hours" required>
+                <input
+                  id="hours"
+                  name="hours"
+                  type="text"
+                  inputMode="decimal"
+                  required
+                  placeholder="np. 8 lub 7,5"
+                  className={inputClass}
+                />
+              </FormField>
+              <div className="sm:col-span-2 lg:col-span-4">
+                <FormField label="Opis wykonanych prac" htmlFor="description">
+                  <textarea id="description" name="description" rows={2} className={textareaClass} />
+                </FormField>
+              </div>
+            </ActionForm>
+          )}
+        </Card>
+
+        <Card
+          title={session.isAdmin ? "Wpisy czasu pracy" : "Moje wpisy"}
+          actions={
+            <p className="text-xs text-muted">
+              Razem <span className="font-semibold text-foreground">{formatHours(totalHours)}</span>
+              <span className="mx-2 text-border">|</span>
+              zatwierdzone{" "}
+              <span className="font-semibold text-foreground">{formatHours(approvedHours)}</span>
+            </p>
+          }
+          flush
+        >
+          <form
+            method="get"
+            className="grid grid-cols-2 gap-3 border-b border-border bg-subtle/60 px-5 py-3 sm:grid-cols-3 lg:grid-cols-6"
+          >
+            <label className={filterLabelClass}>
+              Od
+              <input type="date" name="od" defaultValue={from} className={inputClass} />
+            </label>
+            <label className={filterLabelClass}>
+              Do
+              <input type="date" name="do" defaultValue={to} className={inputClass} />
+            </label>
+            <label className={filterLabelClass}>
+              Budowa
+              <select name="budowa" defaultValue={projectFilter} className={inputClass}>
+                <option value="">Wszystkie</option>
+                {projects.map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.name}
                   </option>
                 ))}
               </select>
-            </FormField>
-            <FormField label="Rodzaj prac" htmlFor="work_category_id">
-              <select id="work_category_id" name="work_category_id" defaultValue="" className={inputClass}>
-                <option value="">— nie wybrano —</option>
-                {categories.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-            </FormField>
-            <FormField label="Data" htmlFor="work_date" required>
-              <input
-                id="work_date"
-                name="work_date"
-                type="date"
-                required
-                max={today}
-                defaultValue={today}
-                className={inputClass}
-              />
-            </FormField>
-            <FormField label="Liczba godzin" htmlFor="hours" required>
-              <input
-                id="hours"
-                name="hours"
-                type="text"
-                inputMode="decimal"
-                required
-                placeholder="np. 8 lub 7,5"
-                className={inputClass}
-              />
-            </FormField>
-            <FormField label="Opis wykonanych prac" htmlFor="description" full>
-              <textarea id="description" name="description" rows={2} className={inputClass} />
-            </FormField>
-          </ActionForm>
-        )}
-      </section>
-
-      <section className="rounded-xl border border-border bg-surface p-5">
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h2 className="text-base font-semibold">
-            {session.isAdmin ? "Wpisy czasu pracy" : "Moje wpisy"}
-          </h2>
-          <p className="text-sm text-muted">
-            Razem: <span className="font-semibold text-foreground">{formatHours(totalHours)}</span>
-            {" · "}zatwierdzone: {formatHours(approvedHours)}
-          </p>
-        </div>
-
-        <form method="get" className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-6">
-          <label className="text-xs text-muted">
-            Od
-            <input type="date" name="od" defaultValue={from} className={clsx(inputClass, "mt-1")} />
-          </label>
-          <label className="text-xs text-muted">
-            Do
-            <input type="date" name="do" defaultValue={to} className={clsx(inputClass, "mt-1")} />
-          </label>
-          <label className="text-xs text-muted">
-            Budowa
-            <select name="budowa" defaultValue={projectFilter} className={clsx(inputClass, "mt-1")}>
-              <option value="">Wszystkie</option>
-              {projects.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          {session.isAdmin && (
-            <label className="text-xs text-muted">
-              Pracownik
-              <select
-                name="pracownik"
-                defaultValue={employeeFilter}
-                className={clsx(inputClass, "mt-1")}
-              >
-                <option value="">Wszyscy</option>
-                {employees.map((e) => (
-                  <option key={e.id} value={e.id}>
-                    {employeeName(e)}
+            </label>
+            {session.isAdmin && (
+              <label className={filterLabelClass}>
+                Pracownik
+                <select name="pracownik" defaultValue={employeeFilter} className={inputClass}>
+                  <option value="">Wszyscy</option>
+                  {employees.map((e) => (
+                    <option key={e.id} value={e.id}>
+                      {employeeName(e)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+            <label className={filterLabelClass}>
+              Status
+              <select name="status" defaultValue={statusFilter} className={inputClass}>
+                <option value="">Wszystkie</option>
+                {Object.entries(TIME_ENTRY_STATUS_LABELS).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
                   </option>
                 ))}
               </select>
             </label>
-          )}
-          <label className="text-xs text-muted">
-            Status
-            <select name="status" defaultValue={statusFilter} className={clsx(inputClass, "mt-1")}>
-              <option value="">Wszystkie</option>
-              {Object.entries(TIME_ENTRY_STATUS_LABELS).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <div className="flex items-end">
-            <Button type="submit" variant="secondary" className="w-full">
-              Filtruj
-            </Button>
-          </div>
-        </form>
+            <div className="flex items-end">
+              <Button type="submit" variant="secondary" className="w-full">
+                Filtruj
+              </Button>
+            </div>
+          </form>
 
-        {entries.length === 0 ? (
-          <p className="mt-6 text-sm text-muted">Brak wpisów w wybranym okresie.</p>
-        ) : (
-          <ul className="mt-4 divide-y divide-border">
-            {entries.map((entry) => {
-              const canDelete = session.isAdmin || entry.status === "zgloszony";
-              return (
-                <li key={entry.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 py-3">
-                  <div className="min-w-0 flex-1 basis-56">
-                    <div className="flex flex-wrap items-center gap-2 text-sm font-medium">
-                      <span>{formatDate(entry.work_date)}</span>
-                      <span className="text-muted">·</span>
-                      <span>{entry.projects?.name ?? "—"}</span>
-                      <span
-                        className={clsx(
-                          "rounded-full px-2 py-0.5 text-xs font-medium",
-                          STATUS_CLASSES[entry.status]
+          {entries.length === 0 ? (
+            <EmptyState>Brak wpisów w wybranym okresie.</EmptyState>
+          ) : (
+            <Table>
+              <thead>
+                <tr>
+                  <Th>Data</Th>
+                  <Th>Budowa</Th>
+                  {session.isAdmin && <Th>Pracownik</Th>}
+                  <Th>Rodzaj prac</Th>
+                  <Th>Opis</Th>
+                  <Th align="right">Godziny</Th>
+                  <Th>Status</Th>
+                  <Th align="right">Akcje</Th>
+                </tr>
+              </thead>
+              <tbody>
+                {entries.map((entry) => {
+                  const canDelete = session.isAdmin || entry.status === "zgloszony";
+                  return (
+                    <Tr key={entry.id}>
+                      <Td className="tabular-nums">{formatDate(entry.work_date)}</Td>
+                      <Td className="font-medium">{entry.projects?.name ?? <Dash />}</Td>
+                      {session.isAdmin && <Td>{employeeName(entry.employees)}</Td>}
+                      <Td>{entry.work_categories?.name ?? <Dash />}</Td>
+                      <Td className="max-w-xs truncate text-muted">
+                        {entry.description ? (
+                          <span title={entry.description}>{entry.description}</span>
+                        ) : (
+                          <Dash />
                         )}
-                      >
-                        {TIME_ENTRY_STATUS_LABELS[entry.status]}
-                      </span>
-                    </div>
-                    <div className="mt-0.5 text-xs text-muted">
-                      {[
-                        session.isAdmin ? employeeName(entry.employees) : null,
-                        entry.work_categories?.name,
-                        entry.description,
-                      ]
-                        .filter(Boolean)
-                        .join(" · ")}
-                    </div>
-                  </div>
-                  <div className="text-sm font-semibold tabular-nums">
-                    {formatHours(Number(entry.hours))}
-                  </div>
-                  <div className="flex items-center gap-1">
-                    {session.isAdmin && entry.status !== "zatwierdzony" && (
-                      <EntryButton
-                        action={setTimeEntryStatusAction}
-                        id={entry.id}
-                        status="zatwierdzony"
-                        label="Zatwierdź"
-                        className="text-success hover:bg-green-50"
-                      >
-                        <Check size={16} />
-                      </EntryButton>
-                    )}
-                    {session.isAdmin && entry.status === "zgloszony" && (
-                      <EntryButton
-                        action={setTimeEntryStatusAction}
-                        id={entry.id}
-                        status="odrzucony"
-                        label="Odrzuć"
-                        className="text-danger hover:bg-red-50"
-                      >
-                        <X size={16} />
-                      </EntryButton>
-                    )}
-                    {session.isAdmin && entry.status !== "zgloszony" && (
-                      <EntryButton
-                        action={setTimeEntryStatusAction}
-                        id={entry.id}
-                        status="zgloszony"
-                        label="Cofnij do zgłoszonych"
-                        className="text-muted hover:bg-black/5"
-                      >
-                        <Undo2 size={16} />
-                      </EntryButton>
-                    )}
-                    {canDelete && (
-                      <EntryButton
-                        action={deleteTimeEntryAction}
-                        id={entry.id}
-                        label="Usuń wpis"
-                        className="text-muted hover:bg-red-50 hover:text-danger"
-                      >
-                        <Trash2 size={16} />
-                      </EntryButton>
-                    )}
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </section>
-    </div>
+                      </Td>
+                      <Td align="right" className="font-semibold">
+                        {formatHours(Number(entry.hours))}
+                      </Td>
+                      <Td>
+                        <Badge tone={STATUS_TONES[entry.status]}>
+                          {TIME_ENTRY_STATUS_LABELS[entry.status]}
+                        </Badge>
+                      </Td>
+                      <Td>
+                        <div className="flex items-center justify-end">
+                          {session.isAdmin && entry.status !== "zatwierdzony" && (
+                            <EntryButton
+                              action={setTimeEntryStatusAction}
+                              id={entry.id}
+                              status="zatwierdzony"
+                              label="Zatwierdź"
+                              className="text-success hover:bg-success/10"
+                            >
+                              <Check size={15} />
+                            </EntryButton>
+                          )}
+                          {session.isAdmin && entry.status === "zgloszony" && (
+                            <EntryButton
+                              action={setTimeEntryStatusAction}
+                              id={entry.id}
+                              status="odrzucony"
+                              label="Odrzuć"
+                              className="text-danger hover:bg-danger/10"
+                            >
+                              <X size={15} />
+                            </EntryButton>
+                          )}
+                          {session.isAdmin && entry.status !== "zgloszony" && (
+                            <EntryButton
+                              action={setTimeEntryStatusAction}
+                              id={entry.id}
+                              status="zgloszony"
+                              label="Cofnij do zgłoszonych"
+                              className="text-muted hover:bg-foreground/5 hover:text-foreground"
+                            >
+                              <Undo2 size={15} />
+                            </EntryButton>
+                          )}
+                          {canDelete && (
+                            <EntryButton
+                              action={deleteTimeEntryAction}
+                              id={entry.id}
+                              label="Usuń wpis"
+                              className="text-muted hover:bg-danger/10 hover:text-danger"
+                            >
+                              <Trash2 size={15} />
+                            </EntryButton>
+                          )}
+                        </div>
+                      </Td>
+                    </Tr>
+                  );
+                })}
+              </tbody>
+            </Table>
+          )}
+        </Card>
+      </div>
+    </>
   );
 }
 
@@ -358,7 +383,7 @@ function EntryButton({
         type="submit"
         title={label}
         aria-label={label}
-        className={clsx("rounded-lg p-2 transition-colors", className)}
+        className={clsx("rounded-md p-1.5 transition-colors", className)}
       >
         {children}
       </button>

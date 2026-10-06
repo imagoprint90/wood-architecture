@@ -12,10 +12,10 @@ export default async function LogowaniePage({
 
   return (
     <>
-      <h1 className="text-center text-lg font-semibold">Zaloguj się</h1>
+      <h1 className="text-center text-base font-semibold">Zaloguj się</h1>
 
       {linkExpired && (
-        <p role="alert" className="mt-4 rounded-lg border border-danger/30 bg-red-50 px-3 py-2 text-sm text-danger">
+        <p role="alert" className="mt-4 rounded-md border border-danger/30 bg-danger/10 px-3 py-2 text-danger">
           Link wygasł lub jest nieprawidłowy. Poproś o nowy.
         </p>
       )}
@@ -48,7 +48,7 @@ export default async function LogowaniePage({
         </FormField>
       </ActionForm>
 
-      <p className="mt-4 text-center text-sm">
+      <p className="mt-4 text-center">
         <Link href="/logowanie/reset-hasla" className="text-primary underline-offset-2 hover:underline">
           Nie pamiętasz hasła?
         </Link>

@@ -12,6 +12,7 @@ export function ActionForm({
   submitLabel,
   successMessage = "Zapisano.",
   fullWidthSubmit = false,
+  secondaryAction,
   className,
   children,
 }: {
@@ -20,6 +21,8 @@ export function ActionForm({
   successMessage?: string;
   // Przycisk na całą szerokość, komunikat pod nim — układ dla wąskich kart (logowanie).
   fullWidthSubmit?: boolean;
+  // Dodatkowy element obok przycisku zapisu, np. link „Anuluj”.
+  secondaryAction?: ReactNode;
   className?: string;
   children: ReactNode;
 }) {
@@ -31,19 +34,20 @@ export function ActionForm({
       <div
         className={clsx(
           "flex gap-3 sm:col-span-2",
-          fullWidthSubmit ? "flex-col" : "flex-wrap items-center"
+          fullWidthSubmit ? "flex-col" : "mt-1 flex-wrap items-center border-t border-border pt-4"
         )}
       >
         <Button type="submit" disabled={pending} className={fullWidthSubmit ? "w-full" : undefined}>
           {pending ? "Proszę czekać…" : submitLabel}
         </Button>
+        {secondaryAction}
         {state?.ok === false && (
-          <p role="alert" className="text-sm text-danger">
+          <p role="alert" className="text-danger">
             {state.error}
           </p>
         )}
         {state?.ok && !pending && (
-          <p role="status" className="text-sm text-success">
+          <p role="status" className="text-success">
             {successMessage}
           </p>
         )}

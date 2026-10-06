@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { z } from "zod";
 import { getSession } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -44,5 +45,5 @@ export async function saveProjectAction(_prev: ActionState, formData: FormData):
   if (error) return { ok: false, error: error.message };
 
   revalidatePath("/budowy");
-  return { ok: true };
+  redirect("/budowy");
 }

@@ -12,12 +12,21 @@ const ITEMS = [
   { href: "/raporty", label: "Raporty", icon: BarChart3, adminOnly: true },
 ];
 
-export function AppNav({ isAdmin }: { isAdmin: boolean }) {
+// `vertical` — lista w bocznym panelu (duże ekrany); `horizontal` — zakładki pod górnym
+// paskiem (telefon, tablet).
+export function AppNav({
+  isAdmin,
+  orientation,
+}: {
+  isAdmin: boolean;
+  orientation: "vertical" | "horizontal";
+}) {
   const pathname = usePathname();
   const items = ITEMS.filter((item) => isAdmin || !item.adminOnly);
+  const vertical = orientation === "vertical";
 
   return (
-    <nav className="flex gap-1 overflow-x-auto">
+    <nav className={vertical ? "flex flex-col gap-0.5" : "flex gap-1 overflow-x-auto px-2 [scrollbar-width:none]"}>
       {items.map(({ href, label, icon: Icon }) => {
         const active = pathname === href || pathname.startsWith(`${href}/`);
         return (
@@ -26,13 +35,19 @@ export function AppNav({ isAdmin }: { isAdmin: boolean }) {
             href={href}
             aria-current={active ? "page" : undefined}
             className={clsx(
-              "flex shrink-0 items-center gap-2 border-b-2 px-3 py-2.5 text-sm font-medium transition-colors",
-              active
-                ? "border-accent text-primary"
-                : "border-transparent text-muted hover:text-foreground"
+              "flex shrink-0 items-center gap-2.5 font-medium transition-colors",
+              vertical ? "rounded-md px-3 py-2" : "border-b-2 px-3 py-2.5",
+              vertical &&
+                (active
+                  ? "bg-accent/15 text-primary"
+                  : "text-muted hover:bg-foreground/5 hover:text-foreground"),
+              !vertical &&
+                (active
+                  ? "border-accent text-primary"
+                  : "border-transparent text-muted hover:text-foreground")
             )}
           >
-            <Icon size={16} />
+            <Icon size={16} className={active ? "text-accent" : undefined} />
             {label}
           </Link>
         );
