@@ -201,7 +201,13 @@ export default async function RaportyPage({
           {pivot.rows.length === 0 ? (
             <EmptyState>Brak danych dla wybranych filtrów.</EmptyState>
           ) : (
-            <PivotTable pivot={pivot} params={params} />
+            <PivotTable
+              // Nowy układ = nowa tabela: sortowanie po kolumnie nie przenosi się między układami.
+              key={`${params.rowDim}-${params.colDim}-${params.continuity}-${params.month}`}
+              pivot={pivot}
+              params={params}
+              rowLabel={ROW_DIMS[params.rowDim]}
+            />
           )}
         </Card>
       </div>

@@ -1,5 +1,9 @@
+"use client";
+
+import { useMemo, useState, type ReactNode } from "react";
 import clsx from "clsx";
-import { ROW_DIMS, type Pivot, type ReportParams } from "@/lib/reports";
+import { ArrowDown, ArrowUp } from "lucide-react";
+import type { Pivot, PivotRow, ReportParams } from "@/lib/reports";
 
 function formatValue(value: number, kind: ReportParams["value"]): string {
   return value.toLocaleString("pl-PL", { maximumFractionDigits: kind === "koszt" ? 0 : 2 });
@@ -8,52 +12,138 @@ function formatValue(value: number, kind: ReportParams["value"]): string {
 const TONE_HEAD = { saturday: "bg-accent/35", holiday: "bg-danger/25" };
 const TONE_CELL = { saturday: "bg-accent/20", holiday: "bg-danger/15" };
 
-export function PivotTable({ pivot, params }: { pivot: Pivot; params: ReportParams }) {
+// Po czym sortowane są wiersze: nazwa, suma, kolumny ciągłości albo konkretna kolumna (indeks).
+type SortKey = "label" | "total" | "reported" | "missing" | number;
+interface Sort {
+  key: SortKey;
+  ascending: boolean;
+}
+
+function sortValue(row: PivotRow, key: Exclude<SortKey, "label">): number {
+  if (key === "total") return row.total;
+  if (key === "reported") return row.reportedDays ?? 0;
+  if (key === "missing") return row.missingDays ?? 0;
+  return row.values[key];
+}
+
+export function PivotTable({
+  pivot,
+  params,
+  rowLabel,
+}: {
+  pivot: Pivot;
+  params: ReportParams;
+  rowLabel: string;
+}) {
+  const [sort, setSort] = useState<Sort>({ key: "label", ascending: true });
+
+  const rows = useMemo(() => {
+    const { key, ascending } = sort;
+    const sorted = [...pivot.rows].sort((a, b) => {
+      const byLabel = a.label.localeCompare(b.label, "pl");
+      if (key === "label") return byLabel;
+      // Przy równych wartościach kolejność alfabetyczna, niezależnie od kierunku.
+      return sortValue(a, key) - sortValue(b, key) || (ascending ? byLabel : -byLabel);
+    });
+    return ascending ? sorted : sorted.reverse();
+  }, [pivot.rows, sort]);
+
+  // Pierwsze kliknięcie: nazwy A→Z, liczby od największej; kolejne odwraca kierunek.
+  function toggleSort(key: SortKey) {
+    setSort((current) =>
+      current.key === key ? { key, ascending: !current.ascending } : { key, ascending: key === "label" }
+    );
+  }
+
   // Dni miesiąca to ~31 wąskich kolumn; pozostałe wymiary mają mało kolumn, za to długie nazwy.
   const narrow = params.colDim === "dzien";
   const headBase =
-    "border-b border-border bg-subtle py-2 text-[11px] font-semibold tracking-wider text-muted uppercase";
-  const stickyFirst = "sticky left-0 z-[1] border-r border-border pl-5 pr-3 text-left";
-  const numeric = clsx("text-right tabular-nums", narrow ? "px-1.5" : "px-3");
+    "border-b border-border bg-subtle text-[11px] font-semibold tracking-wider text-muted uppercase";
+  const stickyFirst = "sticky left-0 z-[1] border-r border-border text-left";
+  const numeric = clsx("text-right tabular-nums", narrow ? "px-1" : "px-3");
+
+  // Zwykła funkcja pomocnicza (nie komponent) — korzysta ze stanu sortowania tej tabeli.
+  function sortButton(
+    sortKey: SortKey,
+    align: "left" | "center" | "right",
+    className: string,
+    children: ReactNode
+  ) {
+    const active = sort.key === sortKey;
+    const Icon = sort.ascending ? ArrowUp : ArrowDown;
+    return (
+      <button
+        type="button"
+        onClick={() => toggleSort(sortKey)}
+        title="Sortuj według tej kolumny"
+        className={clsx(
+          "flex w-full cursor-pointer items-center gap-1 py-2 uppercase transition-colors hover:text-foreground",
+          align === "left" && "justify-start",
+          align === "center" && "flex-col justify-center gap-0",
+          align === "right" && "justify-end",
+          active && "text-primary",
+          className
+        )}
+      >
+        <span>{children}</span>
+        {/* W wąskich kolumnach dni strzałka pojawia się tylko w aktywnej, żeby nie poszerzać tabeli. */}
+        {active ? (
+          <Icon size={11} strokeWidth={2.5} className="shrink-0" />
+        ) : (
+          align !== "center" && <ArrowDown size={11} className="shrink-0 opacity-25" />
+        )}
+      </button>
+    );
+  }
+
+  function ariaSort(key: SortKey) {
+    if (sort.key !== key) return undefined;
+    return sort.ascending ? "ascending" : "descending";
+  }
 
   return (
     <div className="overflow-x-auto">
       <table className="w-full border-separate border-spacing-0 whitespace-nowrap">
         <thead>
           <tr>
-            <th className={clsx(headBase, stickyFirst)}>{ROW_DIMS[params.rowDim]}</th>
-            {pivot.columns.map((column) => (
+            <th aria-sort={ariaSort("label")} className={clsx(headBase, stickyFirst)}>
+              {sortButton("label", "left", "pr-3 pl-5", <>{rowLabel}</>)}
+            </th>
+            {pivot.columns.map((column, i) => (
               <th
                 key={column.key}
                 title={column.title}
-                className={clsx(
-                  headBase,
-                  narrow ? "min-w-8 px-1 text-center" : "px-3 text-right",
-                  column.tone && TONE_HEAD[column.tone]
-                )}
+                aria-sort={ariaSort(i)}
+                className={clsx(headBase, narrow && "min-w-8", column.tone && TONE_HEAD[column.tone])}
               >
-                {column.sublabel && (
-                  <span className="block text-[10px] font-medium opacity-80">{column.sublabel}</span>
-                )}
-                {column.label}
+                {sortButton(i, narrow ? "center" : "right", narrow ? "px-1" : "px-3", <>{column.sublabel && (
+                    <span className="block text-[10px] font-medium opacity-80">{column.sublabel}</span>
+                  )}
+                  {column.label}</>)}
               </th>
             ))}
             {params.continuity && (
               <>
-                <th className={clsx(headBase, "border-l border-border px-3 text-right")}>Dni z raportem</th>
-                <th className={clsx(headBase, "px-3 text-right")}>Braki</th>
+                <th aria-sort={ariaSort("reported")} className={clsx(headBase, "border-l border-border")}>
+                  {sortButton("reported", "right", "px-3", "Dni z raportem")}
+                </th>
+                <th aria-sort={ariaSort("missing")} className={headBase}>
+                  {sortButton("missing", "right", "px-3", "Braki")}
+                </th>
               </>
             )}
-            <th className={clsx(headBase, "border-l border-border pr-5 pl-3 text-right")}>Suma</th>
+            <th aria-sort={ariaSort("total")} className={clsx(headBase, "border-l border-border")}>
+              {sortButton("total", "right", "pr-5 pl-3", "Suma")}
+            </th>
           </tr>
         </thead>
         <tbody>
-          {pivot.rows.map((row) => (
+          {rows.map((row) => (
             <tr key={row.key} className="group">
               <td
                 className={clsx(
                   stickyFirst,
-                  "border-b border-border bg-surface py-2 font-medium group-hover:bg-subtle"
+                  "border-b border-border bg-surface py-2 pr-3 pl-5 font-medium group-hover:bg-subtle"
                 )}
               >
                 {row.label}
@@ -100,7 +190,7 @@ export function PivotTable({ pivot, params }: { pivot: Pivot; params: ReportPara
         </tbody>
         <tfoot>
           <tr className="font-semibold">
-            <td className={clsx(stickyFirst, "bg-subtle py-2.5")}>Razem</td>
+            <td className={clsx(stickyFirst, "bg-subtle py-2.5 pr-3 pl-5")}>Razem</td>
             {pivot.columnTotals.map((value, i) => (
               <td
                 key={pivot.columns[i].key}
