@@ -2,6 +2,7 @@
 
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { LOCKOUT_MESSAGE, checkLoginThrottle } from "@/lib/login-throttle";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { translateAuthError } from "@/lib/supabase/auth-errors";
 import type { ActionState } from "@/lib/types";
@@ -11,8 +12,14 @@ export async function signInAction(_prev: ActionState, formData: FormData): Prom
   const password = String(formData.get("password") ?? "");
   if (!email || !password) return { ok: false, error: "Podaj adres e-mail i hasło." };
 
+  // Po serii nieudanych prób logowanie jest wstrzymane — także przy poprawnym haśle, żeby
+  // odpowiedź nie zdradzała, czy hasło zostało właśnie odgadnięte.
+  const throttle = await checkLoginThrottle(email);
+  if (throttle.blocked) return { ok: false, error: LOCKOUT_MESSAGE };
+
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.auth.signInWithPassword({ email, password });
+  await throttle.record(!error);
   if (error) return { ok: false, error: translateAuthError(error.message) };
 
   redirect("/czas-pracy");

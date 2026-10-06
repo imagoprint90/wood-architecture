@@ -1,6 +1,9 @@
 // Klient Supabase do użytku w Server Components / Route Handlers (Etap 2+).
 // Respektuje sesję logowania zapisaną w ciasteczkach.
 
+// Ten moduł zna klucz serwisowy — "server-only" przerywa build, gdyby ktoś zaimportował go
+// w kodzie wysyłanym do przeglądarki.
+import "server-only";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 

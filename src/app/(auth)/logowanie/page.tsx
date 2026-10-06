@@ -8,15 +8,21 @@ export default async function LogowaniePage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const linkExpired = (await searchParams).blad === "link_wygasl";
+  const reason = (await searchParams).blad;
+  const notice =
+    reason === "link_wygasl"
+      ? "Link wygasł lub jest nieprawidłowy. Poproś o nowy."
+      : reason === "konto_nieaktywne"
+        ? "To konto zostało dezaktywowane. Skontaktuj się z administratorem."
+        : null;
 
   return (
     <>
       <h1 className="text-center text-base font-semibold">Zaloguj się</h1>
 
-      {linkExpired && (
+      {notice && (
         <p role="alert" className="mt-4 rounded-md border border-danger/30 bg-danger/10 px-3 py-2 text-danger">
-          Link wygasł lub jest nieprawidłowy. Poproś o nowy.
+          {notice}
         </p>
       )}
 

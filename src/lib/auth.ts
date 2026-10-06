@@ -1,3 +1,4 @@
+import "server-only";
 import { cache } from "react";
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
@@ -30,8 +31,16 @@ export const getSession = cache(async (): Promise<SessionContext | null> => {
 
   const [{ data: profile }, { data: employee }] = await Promise.all([
     supabase.from("profiles").select("full_name, role").eq("id", user.id).maybeSingle(),
-    supabase.from("employees").select("id, first_name, last_name").eq("user_id", user.id).maybeSingle(),
+    supabase
+      .from("employees")
+      .select("id, first_name, last_name, is_active")
+      .eq("user_id", user.id)
+      .maybeSingle(),
   ]);
+
+  // Konto dezaktywowane przez administratora traci dostęp od razu, a nie dopiero gdy wygaśnie
+  // jego sesja (blokada logowania w Supabase działa z opóźnieniem do godziny).
+  if (employee && !employee.is_active) redirect("/auth/wyloguj");
 
   const role: AppRole = profile?.role === "admin" ? "admin" : "pracownik";
   const employeeFullName = employee ? `${employee.first_name} ${employee.last_name}`.trim() : "";

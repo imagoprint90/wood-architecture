@@ -8,7 +8,10 @@ function cell(value: string | number): string {
   if (typeof value === "number") {
     return (Math.round(value * 100) / 100).toString().replace(".", ",");
   }
-  return /[";\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value;
+  // Tekst zaczynający się od = + - @ Excel potraktowałby jak formułę; apostrof na początku
+  // sprawia, że zostaje zwykłym tekstem (nazwy budów i etapów wpisują ludzie).
+  const safe = /^[=+\-@\t\r]/.test(value) ? `'${value}` : value;
+  return /[";\n]/.test(safe) ? `"${safe.replace(/"/g, '""')}"` : safe;
 }
 
 export async function GET(request: Request) {
