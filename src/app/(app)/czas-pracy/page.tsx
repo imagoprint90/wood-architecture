@@ -1,9 +1,11 @@
 import clsx from "clsx";
-import { Check, Trash2, Undo2, X } from "lucide-react";
+import Link from "next/link";
+import { Check, Pencil, Trash2, Undo2, X } from "lucide-react";
 import { ActionForm } from "@/components/ui/ActionForm";
 import { Button } from "@/components/ui/Button";
 import { Badge, Card, EmptyState, PageHeader } from "@/components/ui/Card";
 import { FormField, inputClass, textareaClass } from "@/components/ui/Form";
+import { HoursInput } from "@/components/ui/HoursInput";
 import { SearchSelect } from "@/components/ui/SearchSelect";
 import { SortableTable } from "@/components/ui/SortableTable";
 import { cells } from "@/components/ui/table-cells";
@@ -17,6 +19,7 @@ import { requireSession } from "@/lib/auth";
 import {
   employeeName,
   formatDate,
+  formatDateTime,
   formatHours,
   isIsoDate,
   monthRange,
@@ -193,15 +196,7 @@ export default async function CzasPracyPage({
                 />
               </FormField>
               <FormField label="Liczba godzin" htmlFor="hours" required>
-                <input
-                  id="hours"
-                  name="hours"
-                  type="text"
-                  inputMode="decimal"
-                  required
-                  placeholder="np. 8 lub 7,5"
-                  className={inputClass}
-                />
+                <HoursInput id="hours" name="hours" required />
               </FormField>
               <div className="sm:col-span-2 lg:col-span-4">
                 <FormField label="Opis wykonanych prac" htmlFor="description">
@@ -326,10 +321,27 @@ export default async function CzasPracyPage({
                     entry.work_categories?.name ?? <Dash />,
                     entry.description ? <span title={entry.description}>{entry.description}</span> : <Dash />,
                     formatHours(Number(entry.hours)),
-                    <Badge tone={STATUS_TONES[entry.status]}>
-                      {TIME_ENTRY_STATUS_LABELS[entry.status]}
-                    </Badge>,
+                    <>
+                      <Badge tone={STATUS_TONES[entry.status]}>{TIME_ENTRY_STATUS_LABELS[entry.status]}</Badge>
+                      {entry.edited_at && (
+                        <span className="mt-1 flex items-center gap-1 text-xs text-warning">
+                          <Pencil size={11} />
+                          Zmodyfikowany: {entry.edited_by_name ?? "administrator"},{" "}
+                          {formatDateTime(entry.edited_at)}
+                        </span>
+                      )}
+                    </>,
                     <div className="flex items-center justify-end">
+                      {session.isAdmin && (
+                        <Link
+                          href={`/czas-pracy/${entry.id}`}
+                          title="Edytuj raport"
+                          aria-label="Edytuj raport"
+                          className="rounded-md p-1.5 text-primary transition-colors hover:bg-accent/10"
+                        >
+                          <Pencil size={15} />
+                        </Link>
+                      )}
                       {session.isAdmin && entry.status !== "zatwierdzony" && (
                         <EntryButton
                           action={setTimeEntryStatusAction}

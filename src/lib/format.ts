@@ -17,6 +17,18 @@ export function formatDate(iso: string): string {
   return `${d}.${m}.${y}`;
 }
 
+// Znacznik czasu z bazy -> "05.10.2026, 14:32" w czasie polskim.
+export function formatDateTime(timestamp: string): string {
+  return new Intl.DateTimeFormat("pl-PL", {
+    timeZone: "Europe/Warsaw",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(timestamp));
+}
+
 // Dzisiejsza data w Polsce jako "RRRR-MM-DD" (serwer Vercela działa w UTC).
 export function todayIso(): string {
   return new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Warsaw" }).format(new Date());

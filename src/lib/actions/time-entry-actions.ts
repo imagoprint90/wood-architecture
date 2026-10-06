@@ -1,11 +1,16 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { getSession } from "@/lib/auth";
+import { formatDate, formatHours } from "@/lib/format";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { ActionState } from "@/lib/types";
-import { firstIssue, isoDate, parseDecimal, textOrNull } from "./helpers";
+import { firstIssue, isoDate, textOrNull } from "./helpers";
+
+const MAX_HOURS_PER_DAY = 24;
 
 const entrySchema = z.object({
   project_id: z.uuid("Wybierz budowę."),
@@ -15,9 +20,77 @@ const entrySchema = z.object({
   hours: z
     .number("Podaj liczbę godzin.")
     .gt(0, "Liczba godzin musi być większa od zera.")
-    .max(24, "Doba ma tylko 24 godziny."),
+    .max(MAX_HOURS_PER_DAY, "W jednym raporcie można wpisać najwyżej 24 godziny."),
   description: z.string().nullable(),
 });
+
+type EntryInput = z.infer<typeof entrySchema>;
+
+// Liczba godzin z formularza: wyłącznie cyfry i przecinek (np. „8” albo „7,5”). Wszystko inne
+// daje NaN, które odrzuci walidacja — pole w przeglądarce i tak nie przyjmuje innych znaków.
+function parseHours(value: FormDataEntryValue | null): number {
+  const text = String(value ?? "").trim();
+  return /^\d{1,2}(,\d{1,2})?$/.test(text) ? Number(text.replace(",", ".")) : NaN;
+}
+
+function readEntry(formData: FormData, employeeId: FormDataEntryValue | null) {
+  return entrySchema.safeParse({
+    project_id: formData.get("project_id"),
+    employee_id: employeeId,
+    work_category_id: formData.get("work_category_id"),
+    work_date: formData.get("work_date"),
+    hours: parseHours(formData.get("hours")),
+    description: textOrNull(formData.get("description")),
+  });
+}
+
+// Reguły wspólne dla dodawania i edycji; zwraca komunikat błędu albo null.
+//  - jeden raport na dzień na danej budowie (odrzucone się nie liczą),
+//  - łącznie nie więcej niż 24 h jednego dnia na wszystkich budowach.
+// `ignoreId` — edytowany wpis, którego nie porównujemy z samym sobą.
+async function checkDayRules(
+  supabase: SupabaseClient,
+  entry: EntryInput,
+  ownReport: boolean,
+  ignoreId?: string
+): Promise<string | null> {
+  const { data, error } = await supabase
+    .from("time_entries")
+    .select("id, project_id, hours, projects(name), work_categories(name)")
+    .eq("employee_id", entry.employee_id)
+    .eq("work_date", entry.work_date)
+    .neq("status", "odrzucony");
+  if (error) return error.message;
+
+  const sameDay = (data ?? []).filter((row) => row.id !== ignoreId);
+  const day = formatDate(entry.work_date);
+  const who = ownReport ? "Masz już" : "Ten pracownik ma już";
+
+  const duplicate = sameDay.find((row) => row.project_id === entry.project_id);
+  if (duplicate) {
+    const project = (duplicate.projects as unknown as { name: string } | null)?.name ?? "tej budowie";
+    const stage = (duplicate.work_categories as unknown as { name: string } | null)?.name;
+    const details = [formatHours(Number(duplicate.hours)), stage].filter(Boolean).join(", ");
+    return `${who} raport z dnia ${day} na budowie „${project}” (${details}). Na jedną budowę można złożyć tylko jeden raport dziennie${
+      ownReport ? " — jeśli wymaga poprawy, zgłoś to administratorowi." : " — popraw istniejący raport."
+    }`;
+  }
+
+  const otherHours = sameDay.reduce((sum, row) => sum + Number(row.hours), 0);
+  if (otherHours + entry.hours > MAX_HOURS_PER_DAY) {
+    return `${who} ${formatHours(otherHours)} zaraportowane w dniu ${day} na innych budowach. Razem z tym raportem byłoby ${formatHours(
+      otherHours + entry.hours
+    )}, a doba ma 24 godziny.`;
+  }
+  return null;
+}
+
+// Naruszenie unikalności w bazie (dwa zapisy w tej samej chwili) — ten sam komunikat co wyżej.
+function databaseError(error: { code?: string; message: string }): string {
+  return error.code === "23505"
+    ? "Raport na tę budowę z tego dnia już istnieje. Na jedną budowę można złożyć tylko jeden raport dziennie."
+    : error.message;
+}
 
 export async function addTimeEntryAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const session = await getSession();
@@ -34,14 +107,7 @@ export async function addTimeEntryAction(_prev: ActionState, formData: FormData)
     };
   }
 
-  const parsed = entrySchema.safeParse({
-    project_id: formData.get("project_id"),
-    employee_id: employeeId,
-    work_category_id: formData.get("work_category_id"),
-    work_date: formData.get("work_date"),
-    hours: parseDecimal(formData.get("hours")),
-    description: textOrNull(formData.get("description")),
-  });
+  const parsed = readEntry(formData, employeeId);
   if (!parsed.success) return { ok: false, error: firstIssue(parsed.error) };
 
   const supabase = await createSupabaseServerClient();
@@ -57,15 +123,66 @@ export async function addTimeEntryAction(_prev: ActionState, formData: FormData)
       return { ok: false, error: "Nie jesteś przydzielony do tej budowy. Zgłoś to administratorowi." };
     }
   }
+
+  const ruleError = await checkDayRules(supabase, parsed.data, parsed.data.employee_id === session.employeeId);
+  if (ruleError) return { ok: false, error: ruleError };
+
   const { error } = await supabase.from("time_entries").insert({
     ...parsed.data,
     // Wpis wprowadzony przez administratora nie wymaga osobnego zatwierdzenia.
     status: session.isAdmin ? "zatwierdzony" : "zgloszony",
   });
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: databaseError(error) };
 
   revalidatePath("/czas-pracy");
   return { ok: true };
+}
+
+// Edycja raportu przez administratora. Zapisuje, kto i kiedy go zmienił — raportujący widzi
+// tę informację na swojej liście.
+export async function updateTimeEntryAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const session = await getSession();
+  if (!session?.isAdmin) return { ok: false, error: "Raporty może edytować tylko administrator." };
+
+  const id = z.uuid().safeParse(formData.get("id"));
+  if (!id.success) return { ok: false, error: "Nie znaleziono raportu." };
+
+  const supabase = await createSupabaseServerClient();
+  const { data: current, error: currentError } = await supabase
+    .from("time_entries")
+    .select("employee_id, status")
+    .eq("id", id.data)
+    .maybeSingle();
+  if (currentError) return { ok: false, error: currentError.message };
+  if (!current) return { ok: false, error: "Nie znaleziono raportu." };
+
+  // Pracownika nie zmieniamy — raport zostaje przy osobie, która go złożyła.
+  const parsed = readEntry(formData, current.employee_id);
+  if (!parsed.success) return { ok: false, error: firstIssue(parsed.error) };
+
+  if (current.status !== "odrzucony") {
+    const ruleError = await checkDayRules(
+      supabase,
+      parsed.data,
+      parsed.data.employee_id === session.employeeId,
+      id.data
+    );
+    if (ruleError) return { ok: false, error: ruleError };
+  }
+
+  const { error } = await supabase
+    .from("time_entries")
+    .update({
+      ...parsed.data,
+      edited_by: session.userId,
+      edited_by_name: session.fullName,
+      edited_at: new Date().toISOString(),
+    })
+    .eq("id", id.data);
+  if (error) return { ok: false, error: databaseError(error) };
+
+  revalidatePath("/czas-pracy");
+  redirect("/czas-pracy");
 }
 
 // Poniższe akcje są podpinane bezpośrednio pod <form action>, dlatego nic nie zwracają;

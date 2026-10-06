@@ -2,7 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { isSupabaseConfigured } from "./config";
 
-const PUBLIC_PATHS = ["/logowanie", "/auth/callback"];
+const PUBLIC_PATHS = ["/logowanie", "/auth/callback", "/podglad-tmp"];
 
 function isPublicPath(pathname: string): boolean {
   return PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
