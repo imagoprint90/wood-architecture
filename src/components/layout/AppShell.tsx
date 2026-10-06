@@ -39,7 +39,7 @@ function UserBadge({ session }: { session: SessionContext }) {
       </span>
       <span className="min-w-0 leading-tight">
         <span className="block truncate font-medium">{session.fullName}</span>
-        <span className="block text-[0.6875rem] text-muted">{ROLE_LABELS[session.role]}</span>
+        <span className="block text-xs text-muted">{ROLE_LABELS[session.role]}</span>
       </span>
     </div>
   );
@@ -55,7 +55,7 @@ export function AppShell({ session, children }: { session: SessionContext; child
           <Logo variant="horizontal" className="h-[30px] w-auto" />
         </Link>
         <div className="flex-1 overflow-y-auto px-3 py-4">
-          <p className="mb-2 px-3 text-[0.6875rem] font-semibold tracking-wider text-muted uppercase">Menu</p>
+          <p className="mb-2 px-3 text-xs font-semibold tracking-wider text-muted uppercase">Menu</p>
           <AppNav isAdmin={session.isAdmin} orientation="vertical" />
         </div>
         <div className="flex flex-col gap-2 border-t border-border p-3">

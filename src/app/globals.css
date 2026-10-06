@@ -61,7 +61,7 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   line-height: 1.5;
 }
 
@@ -69,13 +69,16 @@ body {
   border-color: var(--border);
 }
 
-/* Gęsty układ po zalogowaniu na ekranach komputerowych: cała skala (tekst, odstępy, wysokości
-   pól) liczona jest w rem, więc zmiana tej jednej wartości proporcjonalnie zmniejsza lub
-   powiększa cały interfejs. 70% = tekst podstawowy ok. 9 px. Ekran logowania i telefony
-   zostają w pełnym rozmiarze. */
+/* Skala interfejsu. Wszystko (tekst, odstępy, wysokości pól) liczone jest w rem, więc ta
+   jedna wartość proporcjonalnie zmienia cały interfejs po zalogowaniu.
+   - Telefon / tablet: 100% → tekst 14 px, pola formularzy 16 px (iOS nie przybliża wtedy
+     strony po dotknięciu pola), cele dotykowe pełnej wielkości.
+   - Komputer: 87,5% → tekst ok. 12 px, nagłówki tabel ok. 10,5 px — gęsty układ tabel
+     bez schodzenia poniżej czytelnego minimum.
+   Ekran logowania zostaje w pełnym rozmiarze. */
 @media (min-width: 64rem) {
   :root:has(.app-shell) {
-    font-size: 70%;
+    font-size: 87.5%;
   }
 }
 

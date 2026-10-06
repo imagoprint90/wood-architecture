@@ -60,7 +60,7 @@ export function ProjectFields({
       </FormField>
 
       <div className="border-t border-border pt-4 sm:col-span-2">
-        <h3 className="text-[0.6875rem] font-semibold tracking-wider text-muted uppercase">
+        <h3 className="text-xs font-semibold tracking-wider text-muted uppercase">
           Przydzieleni pracownicy
         </h3>
         <p className="mt-0.5 mb-2 text-xs text-muted">

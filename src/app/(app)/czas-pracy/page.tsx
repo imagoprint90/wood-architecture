@@ -35,7 +35,7 @@ const STATUS_TONES = {
   odrzucony: "danger",
 } as const;
 
-const filterLabelClass = "flex flex-col gap-1 text-[0.6875rem] font-medium text-muted";
+const filterLabelClass = "flex flex-col gap-1 text-xs font-medium text-muted";
 
 function single(value: string | string[] | undefined): string {
   return typeof value === "string" ? value : "";

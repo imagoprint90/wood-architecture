@@ -17,8 +17,8 @@ const VARIANT_CLASSES: Record<Variant, string> = {
 };
 
 const SIZE_CLASSES: Record<Size, string> = {
-  sm: "h-8 px-2.5 text-xs",
-  md: "h-9 px-3.5 text-[0.8125rem]",
+  sm: "h-9 px-3 text-xs lg:h-8 lg:px-2.5",
+  md: "h-11 px-4 text-[0.875rem] lg:h-9 lg:px-3.5",
 };
 
 // Klasy przycisku do użycia także na <Link>, który ma wyglądać jak przycisk.

@@ -28,7 +28,8 @@ export function FormField({
 }
 
 const fieldBase =
-  "w-full rounded-md border border-border bg-surface px-3 text-[0.8125rem] text-foreground outline-none transition-colors placeholder:text-muted/70 focus:border-accent focus:ring-2 focus:ring-accent/20 disabled:opacity-60";
+  "w-full rounded-md border border-border bg-surface px-3 text-base text-foreground outline-none lg:text-[0.875rem] transition-colors placeholder:text-muted/70 focus:border-accent focus:ring-2 focus:ring-accent/20 disabled:opacity-60";
 
-export const inputClass = `${fieldBase} h-9`;
+// Na telefonie pola są wyższe (łatwiej trafić palcem), na komputerze — bardziej zwarte.
+export const inputClass = `${fieldBase} h-11 lg:h-9`;
 export const textareaClass = `${fieldBase} py-2`;
