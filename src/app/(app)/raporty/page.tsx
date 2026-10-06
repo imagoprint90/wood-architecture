@@ -3,6 +3,7 @@ import clsx from "clsx";
 import { ChevronLeft, ChevronRight, Download } from "lucide-react";
 import { Button, buttonClass } from "@/components/ui/Button";
 import { Card, EmptyState, PageHeader } from "@/components/ui/Card";
+import { CollapsibleFilters } from "@/components/ui/CollapsibleFilters";
 import { inputClass } from "@/components/ui/Form";
 import { requireAdmin } from "@/lib/auth";
 import { formatHours, formatMoney } from "@/lib/format";
@@ -47,6 +48,14 @@ export default async function RaportyPage({
   const supabase = await createSupabaseServerClient();
   const report = await loadReport(supabase, params);
   const { pivot, totals } = report;
+  // Ile filtrów zawęża lub zmienia dane (układ wierszy i kolumn to nie filtr) — widoczne
+  // także przy zwiniętym panelu.
+  const activeFilters =
+    Number(Boolean(params.projectId)) +
+    Number(Boolean(params.categoryId)) +
+    Number(Boolean(params.employeeId)) +
+    Number(params.status !== "wszystkie") +
+    Number(params.value !== "godziny");
 
   return (
     <>
@@ -125,9 +134,21 @@ export default async function RaportyPage({
             })}
           </div>
 
+          <CollapsibleFilters
+            storageKey="raporty-filtry"
+            label="Filtry i układ"
+            activeCount={activeFilters}
+            clearHref={`/raporty?${reportQuery(params, {
+              projectId: "",
+              categoryId: "",
+              employeeId: "",
+              status: "wszystkie",
+              value: "godziny",
+            })}`}
+          >
           <form
             method="get"
-            className="grid grid-cols-2 gap-3 border-b border-border bg-subtle/60 px-5 py-3 sm:grid-cols-4 xl:grid-cols-8"
+            className="grid grid-cols-1 gap-3 px-4 py-3 min-[26rem]:grid-cols-2 sm:grid-cols-4 sm:px-5 xl:grid-cols-8"
           >
             <input type="hidden" name="miesiac" value={params.month} />
             {params.continuity ? (
@@ -191,6 +212,7 @@ export default async function RaportyPage({
               </Button>
             </div>
           </form>
+          </CollapsibleFilters>
 
           <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 border-b border-border px-4 py-2.5 text-xs text-muted sm:px-5">
             {params.continuity && <span>Suma godzin każdego pracownika ze wszystkich budów.</span>}

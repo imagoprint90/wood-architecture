@@ -30,12 +30,14 @@ export function CollapsibleFilters({
   storageKey,
   activeCount,
   clearHref,
+  label = "Filtry",
   children,
 }: {
   storageKey: string;
   // Ile filtrów jest ustawionych inaczej niż domyślnie — widać to także przy zwiniętym panelu.
   activeCount: number;
   clearHref: string;
+  label?: string;
   children: ReactNode;
 }) {
   const open = useSyncExternalStore(
@@ -63,7 +65,7 @@ export function CollapsibleFilters({
           className="flex flex-1 items-center gap-2 py-1 text-left font-medium text-muted transition-colors hover:text-foreground"
         >
           <SlidersHorizontal size={14} />
-          Filtry
+          {label}
           {activeCount > 0 && (
             <span className="rounded-full bg-accent/20 px-1.5 text-xs font-semibold text-primary">
               {activeCount}
