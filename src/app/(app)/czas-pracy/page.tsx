@@ -85,7 +85,19 @@ export default async function CzasPracyPage({
   const categories = (categoriesResult.data ?? []) as WorkCategory[];
   const employees = (employeesResult.data ?? []) as Employee[];
   // Do nowych wpisów tylko budowy, na których coś się dzieje; filtr pokazuje wszystkie.
-  const openProjects = projects.filter((p) => p.status === "w_toku" || p.status === "planowana");
+  // Raportujący wpisuje czas tylko na budowach, do których jest przydzielony (błąd odczytu
+  // przydziałów, np. brak migracji 0003, = bez zawężenia; i tak pilnuje tego baza).
+  let assignedIds: Set<string> | null = null;
+  if (!session.isAdmin && session.employeeId) {
+    const { data: memberships } = await supabase
+      .from("project_members")
+      .select("project_id")
+      .eq("employee_id", session.employeeId);
+    if (memberships) assignedIds = new Set(memberships.map((m) => m.project_id as string));
+  }
+  const openProjects = projects.filter(
+    (p) => (p.status === "w_toku" || p.status === "planowana") && (!assignedIds || assignedIds.has(p.id))
+  );
   const activeEmployees = employees.filter((e) => e.is_active);
 
   const totalHours = entries
@@ -116,8 +128,10 @@ export default async function CzasPracyPage({
             </p>
           ) : openProjects.length === 0 ? (
             <p className="text-muted">
-              Brak aktywnych budów.{" "}
-              {session.isAdmin ? "Dodaj budowę w zakładce Budowy." : "Zgłoś to administratorowi."}
+              {session.isAdmin && "Brak aktywnych budów. "}
+              {session.isAdmin
+                ? "Dodaj budowę w zakładce Budowy."
+                : "Nie jesteś przydzielony do żadnej aktywnej budowy — zgłoś to administratorowi."}
             </p>
           ) : (
             <ActionForm

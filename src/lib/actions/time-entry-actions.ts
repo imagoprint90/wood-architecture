@@ -45,6 +45,18 @@ export async function addTimeEntryAction(_prev: ActionState, formData: FormData)
   if (!parsed.success) return { ok: false, error: firstIssue(parsed.error) };
 
   const supabase = await createSupabaseServerClient();
+  if (!session.isAdmin) {
+    // Regułę egzekwuje baza (RLS); tu tylko czytelny komunikat zamiast błędu uprawnień.
+    const { data: membership, error: membershipError } = await supabase
+      .from("project_members")
+      .select("project_id")
+      .eq("project_id", parsed.data.project_id)
+      .eq("employee_id", parsed.data.employee_id)
+      .maybeSingle();
+    if (!membershipError && !membership) {
+      return { ok: false, error: "Nie jesteś przydzielony do tej budowy. Zgłoś to administratorowi." };
+    }
+  }
   const { error } = await supabase.from("time_entries").insert({
     ...parsed.data,
     // Wpis wprowadzony przez administratora nie wymaga osobnego zatwierdzenia.

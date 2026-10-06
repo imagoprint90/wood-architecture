@@ -22,6 +22,13 @@ export default async function BudowyPage() {
   if (error) throw new Error(error.message);
   const projects = (data ?? []) as Project[];
 
+  // Liczba przydzielonych na budowę. Błąd odczytu (np. brak migracji 0003) = zera.
+  const { data: members } = await supabase.from("project_members").select("project_id");
+  const memberCounts = new Map<string, number>();
+  for (const m of members ?? []) {
+    memberCounts.set(m.project_id, (memberCounts.get(m.project_id) ?? 0) + 1);
+  }
+
   return (
     <>
       <PageHeader
@@ -44,6 +51,7 @@ export default async function BudowyPage() {
               <tr>
                 <Th>Nazwa</Th>
                 <Th>Status</Th>
+                <Th align="right">Pracownicy</Th>
                 <Th>Adres</Th>
                 <Th>Inwestor / klient</Th>
                 <Th>Rozpoczęcie</Th>
@@ -58,6 +66,7 @@ export default async function BudowyPage() {
                   <Td>
                     <Badge tone={STATUS_TONES[project.status]}>{PROJECT_STATUS_LABELS[project.status]}</Badge>
                   </Td>
+                  <Td align="right">{memberCounts.get(project.id) ?? <Dash />}</Td>
                   <Td>{project.address ?? <Dash />}</Td>
                   <Td>{project.client_name ?? <Dash />}</Td>
                   <Td className="tabular-nums">

@@ -45,7 +45,15 @@ export function Card({
   children: ReactNode;
 }) {
   return (
-    <section className={clsx("overflow-hidden rounded-lg border border-border bg-surface shadow-xs", className)}>
+    <section
+      className={clsx(
+        "rounded-lg border border-border bg-surface shadow-xs",
+        // Tabela od krawędzi do krawędzi musi być przycięta do zaokrąglonych rogów; zwykła
+        // treść nie — inaczej rozwijane listy w formularzach byłyby ucinane.
+        flush && "overflow-hidden",
+        className
+      )}
+    >
       {title && (
         <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-3">
           <div className="min-w-0">

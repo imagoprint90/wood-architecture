@@ -5,10 +5,12 @@ import { buttonClass } from "@/components/ui/Button";
 import { Card, PageHeader } from "@/components/ui/Card";
 import { saveProjectAction } from "@/lib/actions/project-actions";
 import { requireAdmin } from "@/lib/auth";
-import { ProjectFields } from "../ProjectFields";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { ProjectFields, loadMemberOptions } from "../ProjectFields";
 
 export default async function NowaBudowaPage() {
   await requireAdmin();
+  const { employees, memberIds } = await loadMemberOptions(await createSupabaseServerClient());
 
   return (
     <>
@@ -24,7 +26,7 @@ export default async function NowaBudowaPage() {
           }
           className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2"
         >
-          <ProjectFields />
+          <ProjectFields employees={employees} memberIds={memberIds} />
         </ActionForm>
       </Card>
     </>

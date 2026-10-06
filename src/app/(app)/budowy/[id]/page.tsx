@@ -8,7 +8,7 @@ import { saveProjectAction } from "@/lib/actions/project-actions";
 import { requireAdmin } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { Project } from "@/lib/types";
-import { ProjectFields } from "../ProjectFields";
+import { ProjectFields, loadMemberOptions } from "../ProjectFields";
 
 export default async function EdycjaBudowyPage({ params }: { params: Promise<{ id: string }> }) {
   await requireAdmin();
@@ -20,6 +20,7 @@ export default async function EdycjaBudowyPage({ params }: { params: Promise<{ i
   if (error) throw new Error(error.message);
   if (!data) notFound();
   const project = data as Project;
+  const { employees, memberIds } = await loadMemberOptions(supabase, project.id);
 
   return (
     <>
@@ -36,7 +37,7 @@ export default async function EdycjaBudowyPage({ params }: { params: Promise<{ i
           className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2"
         >
           <input type="hidden" name="id" value={project.id} />
-          <ProjectFields project={project} />
+          <ProjectFields project={project} employees={employees} memberIds={memberIds} />
         </ActionForm>
       </Card>
     </>
