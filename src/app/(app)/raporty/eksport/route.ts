@@ -1,5 +1,6 @@
+import { logEvent } from "@/lib/audit";
 import { getSession } from "@/lib/auth";
-import { ROW_DIMS, loadReport, parseReportParams } from "@/lib/reports";
+import { COL_DIMS, ROW_DIMS, loadReport, parseReportParams } from "@/lib/reports";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 // Eksport bieżącego widoku raportu do CSV dla Excela: separator średnik, przecinek dziesiętny,
@@ -44,6 +45,15 @@ export async function GET(request: Request) {
     ]),
     ["Razem", ...pivot.columnTotals, ...extraHead.map(() => ""), pivot.grandHours, pivot.grandCost],
   ];
+
+  await logEvent({
+    action: "eksport",
+    area: "raporty",
+    target: `${params.continuity ? "Ciągłość raportów" : `${ROW_DIMS[params.rowDim]} × ${COL_DIMS[params.colDim]}`}, ${
+      params.colDim === "miesiac" ? params.month.slice(0, 4) : params.month
+    }`,
+    details: "Pobrano plik CSV.",
+  });
 
   const csv = "﻿" + lines.map((line) => line.map(cell).join(";")).join("\r\n") + "\r\n";
   const period = params.colDim === "miesiac" ? params.month.slice(0, 4) : params.month;

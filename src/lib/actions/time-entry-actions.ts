@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
+import { describeChanges, logEvent } from "@/lib/audit";
 import { getSession } from "@/lib/auth";
 import { formatDate, formatHours, todayIso } from "@/lib/format";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -96,6 +97,48 @@ function databaseError(error: { code?: string; message: string }): string {
     : error.message;
 }
 
+// Wpis z nazwami zamiast identyfikatorów — do opisów w dzienniku zdarzeń.
+const ENTRY_SELECT =
+  "id, work_date, hours, description, status, projects(name), employees(first_name, last_name), work_categories(name)";
+
+interface EntryRow {
+  work_date: string;
+  hours: number;
+  description: string | null;
+  status: string;
+  projects: { name: string } | null;
+  employees: { first_name: string; last_name: string } | null;
+  work_categories: { name: string } | null;
+}
+
+// „Nowak Jan, 06.10.2026, Dom Kowalskich” — czego dotyczy zdarzenie.
+function entryTarget(row: EntryRow): string {
+  const who = row.employees ? `${row.employees.last_name} ${row.employees.first_name}`.trim() : "—";
+  return `${who}, ${formatDate(row.work_date)}, ${row.projects?.name ?? "—"}`;
+}
+
+function entryFields(row: EntryRow): Record<string, unknown> {
+  return {
+    project: row.projects?.name ?? null,
+    stage: row.work_categories?.name ?? null,
+    date: formatDate(row.work_date),
+    hours: Number(row.hours),
+    description: row.description,
+  };
+}
+
+const ENTRY_FIELD_LABELS = {
+  project: "Budowa",
+  stage: "Etap prac",
+  date: "Data",
+  hours: "Godziny",
+  description: "Opis",
+};
+
+function entrySummary(row: EntryRow): string {
+  return `${row.work_categories?.name ?? "bez etapu"}, ${formatHours(Number(row.hours))}`;
+}
+
 export async function addTimeEntryAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const session = await getSession();
   if (!session) return { ok: false, error: "Sesja wygasła. Zaloguj się ponownie." };
@@ -153,12 +196,23 @@ export async function addTimeEntryAction(_prev: ActionState, formData: FormData)
   const ruleError = await checkDayRules(supabase, parsed.data, parsed.data.employee_id === session.employeeId);
   if (ruleError) return { ok: false, error: ruleError };
 
-  const { error } = await supabase.from("time_entries").insert({
-    ...parsed.data,
-    // Wpis wprowadzony przez administratora nie wymaga osobnego zatwierdzenia.
-    status: session.isAdmin ? "zatwierdzony" : "zgloszony",
-  });
+  const { data: created, error } = await supabase
+    .from("time_entries")
+    .insert({
+      ...parsed.data,
+      // Wpis wprowadzony przez administratora nie wymaga osobnego zatwierdzenia.
+      status: session.isAdmin ? "zatwierdzony" : "zgloszony",
+    })
+    .select(ENTRY_SELECT)
+    .single();
   if (error) return { ok: false, error: databaseError(error) };
+  const createdRow = created as unknown as EntryRow;
+  await logEvent({
+    action: "dodanie",
+    area: "czas_pracy",
+    target: entryTarget(createdRow),
+    details: entrySummary(createdRow),
+  });
 
   revalidatePath("/czas-pracy");
   return { ok: true };
@@ -176,9 +230,9 @@ export async function updateTimeEntryAction(_prev: ActionState, formData: FormDa
   const supabase = await createSupabaseServerClient();
   const { data: current, error: currentError } = await supabase
     .from("time_entries")
-    .select("employee_id, status")
+    .select(`employee_id, ${ENTRY_SELECT}`)
     .eq("id", id.data)
-    .maybeSingle();
+    .maybeSingle<EntryRow & { employee_id: string }>();
   if (currentError) return { ok: false, error: currentError.message };
   if (!current) return { ok: false, error: "Nie znaleziono raportu." };
 
@@ -196,7 +250,7 @@ export async function updateTimeEntryAction(_prev: ActionState, formData: FormDa
     if (ruleError) return { ok: false, error: ruleError };
   }
 
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from("time_entries")
     .update({
       ...parsed.data,
@@ -204,8 +258,17 @@ export async function updateTimeEntryAction(_prev: ActionState, formData: FormDa
       edited_by_name: session.fullName,
       edited_at: new Date().toISOString(),
     })
-    .eq("id", id.data);
+    .eq("id", id.data)
+    .select(ENTRY_SELECT)
+    .single();
   if (error) return { ok: false, error: databaseError(error) };
+  const updatedRow = updated as unknown as EntryRow;
+  await logEvent({
+    action: "zmiana",
+    area: "czas_pracy",
+    target: entryTarget(updatedRow),
+    details: describeChanges(entryFields(current), entryFields(updatedRow), ENTRY_FIELD_LABELS) || "Zapis bez zmian.",
+  });
 
   revalidatePath("/czas-pracy");
   redirect("/czas-pracy");
@@ -217,7 +280,22 @@ export async function deleteTimeEntryAction(formData: FormData): Promise<void> {
   const session = await getSession();
   if (!session) return;
   const supabase = await createSupabaseServerClient();
-  await supabase.from("time_entries").delete().eq("id", String(formData.get("id")));
+  // RLS zwraca usunięty wiersz tylko wtedy, gdy usunięcie było dozwolone i faktycznie nastąpiło.
+  const { data: removed } = await supabase
+    .from("time_entries")
+    .delete()
+    .eq("id", String(formData.get("id")))
+    .select(ENTRY_SELECT)
+    .maybeSingle();
+  if (removed) {
+    const removedRow = removed as unknown as EntryRow;
+    await logEvent({
+      action: "usuniecie",
+      area: "czas_pracy",
+      target: entryTarget(removedRow),
+      details: entrySummary(removedRow),
+    });
+  }
   revalidatePath("/czas-pracy");
 }
 
@@ -227,9 +305,21 @@ export async function setTimeEntryStatusAction(formData: FormData): Promise<void
   const status = z.enum(["zgloszony", "zatwierdzony", "odrzucony"]).safeParse(formData.get("status"));
   if (!status.success) return;
   const supabase = await createSupabaseServerClient();
-  await supabase
+  const { data: changed } = await supabase
     .from("time_entries")
     .update({ status: status.data })
-    .eq("id", String(formData.get("id")));
+    .eq("id", String(formData.get("id")))
+    .select(ENTRY_SELECT)
+    .maybeSingle();
+  if (changed) {
+    const changedRow = changed as unknown as EntryRow;
+    await logEvent({
+      action:
+        status.data === "zatwierdzony" ? "zatwierdzenie" : status.data === "odrzucony" ? "odrzucenie" : "cofniecie",
+      area: "czas_pracy",
+      target: entryTarget(changedRow),
+      details: entrySummary(changedRow),
+    });
+  }
   revalidatePath("/czas-pracy");
 }

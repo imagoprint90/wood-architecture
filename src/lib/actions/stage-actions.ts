@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { describeChanges, logEvent } from "@/lib/audit";
 import { getSession } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { ActionState } from "@/lib/types";
@@ -55,16 +56,24 @@ export async function saveStageAction(_prev: ActionState, formData: FormData): P
   if (!id) {
     const { error } = await supabase.from("work_categories").insert(parsed.data);
     if (error) return { ok: false, error: duplicateNameError(error.message) };
+    await logEvent({ action: "dodanie", area: "etapy", target: parsed.data.name });
     revalidateStages();
     return { ok: true };
   }
 
+  const { data: before } = await supabase.from("work_categories").select("*").eq("id", id).maybeSingle();
+  const after = { ...parsed.data, is_archived: formData.get("is_active") !== "on" };
+
   const { error } = await supabase
     .from("work_categories")
     // Zaznaczone „Aktywny” = etap dostępny w nowych raportach.
-    .update({ ...parsed.data, is_archived: formData.get("is_active") !== "on" })
+    .update(after)
     .eq("id", id);
   if (error) return { ok: false, error: duplicateNameError(error.message) };
+  const changes = before
+    ? describeChanges(before, after, { name: "Nazwa", sort_order: "Kolejność", is_archived: "Wyłączony" })
+    : "";
+  if (changes) await logEvent({ action: "zmiana", area: "etapy", target: parsed.data.name, details: changes });
   revalidateStages();
   redirect("/etapy-prac");
 }
@@ -90,8 +99,14 @@ export async function deleteStageAction(_prev: ActionState, formData: FormData):
     };
   }
 
-  const { error } = await supabase.from("work_categories").delete().eq("id", id.data);
+  const { data: removed, error } = await supabase
+    .from("work_categories")
+    .delete()
+    .eq("id", id.data)
+    .select("name")
+    .maybeSingle();
   if (error) return { ok: false, error: error.message };
+  if (removed) await logEvent({ action: "usuniecie", area: "etapy", target: removed.name });
   revalidateStages();
   return { ok: true };
 }

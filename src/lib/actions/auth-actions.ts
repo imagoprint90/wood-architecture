@@ -2,6 +2,7 @@
 
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { logEvent } from "@/lib/audit";
 import { LOCKOUT_MESSAGE, checkLoginThrottle } from "@/lib/login-throttle";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { translateAuthError } from "@/lib/supabase/auth-errors";
@@ -12,20 +13,50 @@ export async function signInAction(_prev: ActionState, formData: FormData): Prom
   const password = String(formData.get("password") ?? "");
   if (!email || !password) return { ok: false, error: "Podaj adres e-mail i hasło." };
 
+  // Przy próbach logowania sesji jeszcze nie ma — sprawcą w dzienniku jest wpisany adres e-mail.
+  const unknownActor = { id: null, name: email, email };
+
   // Po serii nieudanych prób logowanie jest wstrzymane — także przy poprawnym haśle, żeby
   // odpowiedź nie zdradzała, czy hasło zostało właśnie odgadnięte.
   const throttle = await checkLoginThrottle(email);
-  if (throttle.blocked) return { ok: false, error: LOCKOUT_MESSAGE };
+  if (throttle.blocked) {
+    await logEvent({
+      action: "blokada_logowania",
+      area: "konto",
+      target: email,
+      details: "Zbyt wiele nieudanych prób — logowanie czasowo wstrzymane.",
+      actor: unknownActor,
+    });
+    return { ok: false, error: LOCKOUT_MESSAGE };
+  }
 
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
   await throttle.record(!error);
-  if (error) return { ok: false, error: translateAuthError(error.message) };
+  if (error) {
+    const message = translateAuthError(error.message);
+    await logEvent({ action: "blad_logowania", area: "konto", target: email, details: message, actor: unknownActor });
+    return { ok: false, error: message };
+  }
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("full_name")
+    .eq("id", data.user.id)
+    .maybeSingle();
+  await logEvent({
+    action: "logowanie",
+    area: "konto",
+    target: email,
+    actor: { id: data.user.id, name: profile?.full_name || email, email },
+  });
 
   redirect("/czas-pracy");
 }
 
 export async function signOutAction(): Promise<void> {
+  // Zapis przed wylogowaniem — potem nie byłoby już wiadomo, kto się wylogował.
+  await logEvent({ action: "wylogowanie", area: "konto" });
   const supabase = await createSupabaseServerClient();
   await supabase.auth.signOut();
   redirect("/logowanie");
@@ -48,6 +79,13 @@ export async function requestPasswordResetAction(
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
     redirectTo: `${origin}/auth/callback?dalej=/ustaw-haslo`,
+  });
+  await logEvent({
+    action: "reset_hasla",
+    area: "konto",
+    target: email,
+    details: error ? `Nie wysłano: ${translateAuthError(error.message)}` : "Poproszono o link do ustawienia nowego hasła.",
+    actor: { id: null, name: email, email },
   });
   if (error && error.message.toLowerCase().includes("rate limit")) {
     return { ok: false, error: translateAuthError(error.message) };
@@ -76,6 +114,12 @@ export async function setPasswordAction(_prev: ActionState, formData: FormData):
     return { ok: false, error: translateAuthError(error.message) };
   }
 
+  await logEvent({
+    action: "zmiana_hasla",
+    area: "konto",
+    target: user.email ?? null,
+    details: "Nowe hasło ustawione z linku w e-mailu.",
+  });
   redirect("/czas-pracy");
 }
 
@@ -104,9 +148,23 @@ export async function changeOwnPasswordAction(
     email: user.email,
     password: current,
   });
-  if (verifyError) return { ok: false, error: "Obecne hasło jest nieprawidłowe." };
+  if (verifyError) {
+    await logEvent({
+      action: "zmiana_hasla",
+      area: "konto",
+      target: user.email,
+      details: "Nieudana próba zmiany własnego hasła — błędne obecne hasło.",
+    });
+    return { ok: false, error: "Obecne hasło jest nieprawidłowe." };
+  }
 
   const { error } = await supabase.auth.updateUser({ password });
   if (error) return { ok: false, error: translateAuthError(error.message) };
+  await logEvent({
+    action: "zmiana_hasla",
+    area: "konto",
+    target: user.email,
+    details: "Własne hasło zmienione w zakładce Moje konto.",
+  });
   return { ok: true };
 }

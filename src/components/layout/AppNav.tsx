@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import clsx from "clsx";
-import { BarChart3, Clock, HardHat, ListChecks, Users } from "lucide-react";
+import { BarChart3, Clock, HardHat, ListChecks, ScrollText, Users } from "lucide-react";
 
 const ITEMS = [
   { href: "/czas-pracy", label: "Czas pracy", icon: Clock, adminOnly: false },
@@ -11,6 +11,7 @@ const ITEMS = [
   { href: "/etapy-prac", label: "Etapy prac", icon: ListChecks, adminOnly: true },
   { href: "/uzytkownicy", label: "Użytkownicy", icon: Users, adminOnly: true },
   { href: "/raporty", label: "Raporty", icon: BarChart3, adminOnly: true },
+  { href: "/logi", label: "Logi", icon: ScrollText, adminOnly: true },
 ];
 
 // `vertical` — lista w bocznym panelu (duże ekrany); `horizontal` — zakładki pod górnym

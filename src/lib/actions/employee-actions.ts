@@ -3,10 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { describeChanges, logEvent } from "@/lib/audit";
 import { getSession } from "@/lib/auth";
 import { createSupabaseServerClient, createSupabaseServiceClient } from "@/lib/supabase/server";
 import { translateAuthError } from "@/lib/supabase/auth-errors";
-import type { ActionState, AppRole } from "@/lib/types";
+import { ROLE_LABELS, type ActionState, type AppRole } from "@/lib/types";
 import { DEFAULT_REPORT_DAYS_BACK } from "@/lib/workdays";
 import { firstIssue, parseDecimal, textOrNull } from "./helpers";
 
@@ -107,6 +108,12 @@ export async function createUserAction(_prev: ActionState, formData: FormData): 
     return { ok: false, error: error.message };
   }
 
+  await logEvent({
+    action: "dodanie",
+    area: "uzytkownicy",
+    target: fullName,
+    details: `Konto: ${credentials.data.email}; rola: ${ROLE_LABELS[credentials.data.role]}`,
+  });
   revalidatePath("/uzytkownicy");
   redirect("/uzytkownicy");
 }
@@ -125,11 +132,14 @@ export async function updateUserAction(_prev: ActionState, formData: FormData): 
   const supabase = await createSupabaseServerClient();
   const { data: current, error: currentError } = await supabase
     .from("employees")
-    .select("user_id")
+    .select("*")
     .eq("id", id.data)
     .maybeSingle();
   if (currentError) return { ok: false, error: currentError.message };
   if (!current) return { ok: false, error: "Nie znaleziono użytkownika." };
+  const { data: profileBefore } = current.user_id
+    ? await supabase.from("profiles").select("role").eq("id", current.user_id).maybeSingle()
+    : { data: null };
 
   // Administrator nie odbiera dostępu sam sobie — inaczej mógłby zostać system bez admina.
   if (current.user_id === session.userId) {
@@ -163,6 +173,33 @@ export async function updateUserAction(_prev: ActionState, formData: FormData): 
     }
   }
 
+  const roleLabel = (role: unknown) => (role === "admin" ? ROLE_LABELS.admin : ROLE_LABELS.pracownik);
+  const changes = describeChanges(
+    { ...current, role: profileBefore ? roleLabel(profileBefore.role) : null },
+    {
+      ...person.data,
+      role: current.user_id && roleInput.success ? roleLabel(roleInput.data) : profileBefore ? roleLabel(profileBefore.role) : null,
+    },
+    {
+      first_name: "Imię",
+      last_name: "Nazwisko",
+      position: "Stanowisko",
+      phone: "Telefon",
+      hourly_rate: "Stawka",
+      report_days_back: "Dni wstecz",
+      is_active: "Aktywny",
+      role: "Rola",
+    }
+  );
+  if (changes) {
+    await logEvent({
+      action: "zmiana",
+      area: "uzytkownicy",
+      target: `${person.data.first_name} ${person.data.last_name}`.trim(),
+      details: changes,
+    });
+  }
+
   revalidatePath("/uzytkownicy");
   redirect("/uzytkownicy");
 }
@@ -179,7 +216,7 @@ export async function deleteUserAction(_prev: ActionState, formData: FormData): 
   const service = createSupabaseServiceClient();
   const { data: employee, error: employeeError } = await service
     .from("employees")
-    .select("user_id")
+    .select("user_id, first_name, last_name")
     .eq("id", id.data)
     .maybeSingle();
   if (employeeError) return { ok: false, error: employeeError.message };
@@ -202,6 +239,12 @@ export async function deleteUserAction(_prev: ActionState, formData: FormData): 
 
   const { error: deleteError } = await service.from("employees").delete().eq("id", id.data);
   if (deleteError) return { ok: false, error: deleteError.message };
+  await logEvent({
+    action: "usuniecie",
+    area: "uzytkownicy",
+    target: `${employee.first_name} ${employee.last_name}`.trim(),
+    details: employee.user_id ? "Usunięto razem z kontem logowania." : "Osoba bez konta logowania.",
+  });
   if (employee.user_id) {
     const { error: accountError } = await service.auth.admin.deleteUser(employee.user_id);
     if (accountError) {
@@ -252,6 +295,12 @@ export async function createEmployeeAccountAction(
     return { ok: false, error: error.message };
   }
 
+  await logEvent({
+    action: "dodanie",
+    area: "uzytkownicy",
+    target: fullName,
+    details: `Założono konto logowania: ${credentials.data.email}; rola: ${ROLE_LABELS[credentials.data.role]}`,
+  });
   revalidatePath("/uzytkownicy");
   return { ok: true };
 }
@@ -272,7 +321,7 @@ export async function setUserPasswordAction(_prev: ActionState, formData: FormDa
   const service = createSupabaseServiceClient();
   const { data: employee, error: employeeError } = await service
     .from("employees")
-    .select("user_id")
+    .select("user_id, first_name, last_name")
     .eq("id", id.data)
     .maybeSingle();
   if (employeeError) return { ok: false, error: employeeError.message };
@@ -280,5 +329,11 @@ export async function setUserPasswordAction(_prev: ActionState, formData: FormDa
 
   const { error } = await service.auth.admin.updateUserById(employee.user_id, { password });
   if (error) return { ok: false, error: translateAuthError(error.message) };
+  await logEvent({
+    action: "zmiana_hasla",
+    area: "uzytkownicy",
+    target: `${employee.first_name} ${employee.last_name}`.trim(),
+    details: "Administrator ustawił nowe hasło.",
+  });
   return { ok: true };
 }
