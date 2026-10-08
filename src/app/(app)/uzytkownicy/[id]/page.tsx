@@ -7,6 +7,7 @@ import { Card, PageHeader } from "@/components/ui/Card";
 import { FormField, inputClass } from "@/components/ui/Form";
 import {
   createEmployeeAccountAction,
+  setUserEmailAction,
   setUserPasswordAction,
   updateUserAction,
 } from "@/lib/actions/employee-actions";
@@ -89,6 +90,39 @@ export default async function EdycjaUzytkownikaPage({ params }: { params: Promis
             {account && <p className="text-xs text-muted col-span-full">{ROLE_HINT}</p>}
           </ActionForm>
         </Card>
+
+        {account && (
+          <Card
+            title="Adres e-mail (login)"
+            description={
+              isSelf
+                ? "Po zmianie logujesz się nowym adresem; hasło zostaje to samo."
+                : "Po zmianie użytkownik loguje się nowym adresem; hasło zostaje to samo. Poinformuj go o tym."
+            }
+          >
+            <ActionForm
+              action={setUserEmailAction}
+              submitLabel="Zmień adres e-mail"
+              successMessage="Adres e-mail został zmieniony."
+              className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2"
+            >
+              <input type="hidden" name="employee_id" value={employee.id} />
+              <FormField label="Obecny adres" htmlFor="current-email">
+                <input id="current-email" value={account.email ?? "—"} disabled readOnly className={inputClass} />
+              </FormField>
+              <FormField label="Nowy adres e-mail" htmlFor="new-email" required>
+                <input
+                  id="new-email"
+                  name="email"
+                  type="email"
+                  required
+                  autoComplete="off"
+                  className={inputClass}
+                />
+              </FormField>
+            </ActionForm>
+          </Card>
+        )}
 
         {account && isSelf && (
           <Card title="Zmiana hasła">

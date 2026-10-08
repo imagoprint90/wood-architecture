@@ -337,3 +337,65 @@ export async function setUserPasswordAction(_prev: ActionState, formData: FormDa
   });
   return { ok: true };
 }
+
+// Administrator zmienia adres e-mail użytkownika. Adres jest jednocześnie loginem, więc od tej
+// chwili użytkownik loguje się nowym adresem (hasło zostaje to samo) i na ten adres dostaje
+// link do resetu hasła. Zmiana działa od razu, bez potwierdzania mailem.
+export async function setUserEmailAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const session = await getSession();
+  if (!session?.isAdmin) return { ok: false, error: "Adres e-mail zmienia tylko administrator." };
+
+  const id = z.uuid().safeParse(formData.get("employee_id"));
+  if (!id.success) return { ok: false, error: "Nie znaleziono użytkownika." };
+  const email = z
+    .email("Podaj prawidłowy adres e-mail.")
+    .safeParse(String(formData.get("email") ?? "").trim().toLowerCase());
+  if (!email.success) return { ok: false, error: firstIssue(email.error) };
+
+  const service = createSupabaseServiceClient();
+  const { data: employee, error: employeeError } = await service
+    .from("employees")
+    .select("user_id, first_name, last_name")
+    .eq("id", id.data)
+    .maybeSingle();
+  if (employeeError) return { ok: false, error: employeeError.message };
+  if (!employee?.user_id) return { ok: false, error: "Ta osoba nie ma konta do logowania." };
+
+  const { data: profile } = await service
+    .from("profiles")
+    .select("email")
+    .eq("id", employee.user_id)
+    .maybeSingle();
+  if (profile?.email === email.data) return { ok: false, error: "To jest obecny adres e-mail tego użytkownika." };
+
+  const { error } = await service.auth.admin.updateUserById(employee.user_id, {
+    email: email.data,
+    email_confirm: true,
+  });
+  if (error) {
+    const message = error.message.toLowerCase();
+    if (message.includes("already") || message.includes("registered") || message.includes("exists")) {
+      return { ok: false, error: "Ten adres e-mail jest już używany przez inne konto." };
+    }
+    return { ok: false, error: translateAuthError(error.message) };
+  }
+
+  // Kopia adresu w profilu służy do wyświetlania na listach.
+  const { error: profileError } = await service
+    .from("profiles")
+    .update({ email: email.data })
+    .eq("id", employee.user_id);
+  if (profileError) {
+    return { ok: false, error: `Login został zmieniony, ale lista użytkowników pokaże stary adres: ${profileError.message}` };
+  }
+
+  await logEvent({
+    action: "zmiana",
+    area: "uzytkownicy",
+    target: `${employee.first_name} ${employee.last_name}`.trim(),
+    details: `Adres e-mail (login): ${profile?.email ?? "—"} → ${email.data}`,
+  });
+  revalidatePath("/uzytkownicy");
+  revalidatePath(`/uzytkownicy/${id.data}`);
+  return { ok: true };
+}
