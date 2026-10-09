@@ -33,7 +33,7 @@ type EntryInput = z.infer<typeof entrySchema>;
 // daje NaN, które odrzuci walidacja — pole w przeglądarce i tak nie przyjmuje innych znaków.
 function parseHours(value: FormDataEntryValue | null): number {
   const text = String(value ?? "").trim();
-  return /^\d{1,2}(,\d{1,2})?$/.test(text) ? Number(text.replace(",", ".")) : NaN;
+  return /^\d{1,2}(,\d{1,4})?$/.test(text) ? Number(text.replace(",", ".")) : NaN;
 }
 
 function readEntry(formData: FormData, employeeId: FormDataEntryValue | null) {
