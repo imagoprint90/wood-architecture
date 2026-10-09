@@ -28,7 +28,8 @@ const entrySchema = z.object({
 
 type EntryInput = z.infer<typeof entrySchema>;
 
-// Liczba godzin z formularza: wyłącznie cyfry i przecinek (np. „8” albo „7,5”). Wszystko inne
+// Liczba godzin z formularza: wyłącznie cyfry i przecinek (np. „8” albo „7,5”). Do 4 miejsc po
+// przecinku, bo takie wartości mają wpisy z importu (pole w przeglądarce przyjmuje 2). Wszystko inne
 // daje NaN, które odrzuci walidacja — pole w przeglądarce i tak nie przyjmuje innych znaków.
 function parseHours(value: FormDataEntryValue | null): number {
   const text = String(value ?? "").trim();
