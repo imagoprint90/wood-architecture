@@ -6,7 +6,7 @@ import { ArrowDown, ArrowUp } from "lucide-react";
 import type { EntryDetail, Pivot, PivotColumn, PivotRow, ReportParams } from "@/lib/reports";
 
 function formatValue(value: number, kind: ReportParams["value"]): string {
-  return value.toLocaleString("pl-PL", { maximumFractionDigits: kind === "koszt" ? 0 : 2 });
+  return value.toLocaleString("pl-PL", { maximumFractionDigits: kind === "koszt" ? 0 : 4 });
 }
 
 // Kwota w złotych z groszami, bez symbolu waluty (jest w nagłówku kolumny).
@@ -15,7 +15,7 @@ function formatMoney(amount: number): string {
 }
 
 function formatHours(hours: number): string {
-  return `${hours.toLocaleString("pl-PL", { maximumFractionDigits: 2 })} h`;
+  return `${hours.toLocaleString("pl-PL", { maximumFractionDigits: 4 })} h`;
 }
 
 const TONE_HEAD = { saturday: "bg-accent/35", holiday: "bg-danger/25" };

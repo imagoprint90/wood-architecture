@@ -4,7 +4,7 @@ export function employeeName(e: { first_name: string; last_name: string } | null
 }
 
 export function formatHours(hours: number): string {
-  return `${hours.toLocaleString("pl-PL", { maximumFractionDigits: 2 })} h`;
+  return `${hours.toLocaleString("pl-PL", { maximumFractionDigits: 4 })} h`;
 }
 
 export function formatMoney(amount: number): string {

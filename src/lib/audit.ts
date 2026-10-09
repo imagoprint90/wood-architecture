@@ -56,7 +56,7 @@ export async function logEvent(event: {
 function show(value: unknown): string {
   if (value === null || value === undefined || value === "") return "—";
   if (typeof value === "boolean") return value ? "tak" : "nie";
-  if (typeof value === "number") return value.toLocaleString("pl-PL", { maximumFractionDigits: 2 });
+  if (typeof value === "number") return value.toLocaleString("pl-PL", { maximumFractionDigits: 4 });
   return String(value);
 }
 
